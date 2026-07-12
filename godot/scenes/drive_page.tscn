@@ -1,0 +1,105 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/drive_page.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/graph.gd" id="2"]
+[ext_resource type="StyleBoxFlat" path="res://themes/pane_box.tres" id="3"]
+[ext_resource type="PackedScene" path="res://scenes/telemetry_box.tscn" id="4"]
+
+[node name="DrivePage" type="HBoxContainer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 8
+script = ExtResource("1")
+
+[node name="SlotA" type="VBoxContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Header" type="Label" parent="SlotA"]
+layout_mode = 2
+text = "Webcam"
+
+[node name="Cam" type="TextureRect" parent="SlotA"]
+layout_mode = 2
+size_flags_vertical = 3
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Graph" type="MarginContainer" parent="SlotA"]
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="Box" type="PanelContainer" parent="SlotA/Graph"]
+layout_mode = 2
+theme_override_styles/panel = ExtResource("3")
+
+[node name="View" type="Control" parent="SlotA/Graph/Box"]
+layout_mode = 2
+size_flags_vertical = 3
+script = ExtResource("2")
+
+[node name="Telem" type="MarginContainer" parent="SlotA"]
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="Box" parent="SlotA/Telem" instance=ExtResource("4")]
+layout_mode = 2
+
+[node name="SlotB" type="VBoxContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Header" type="Label" parent="SlotB"]
+layout_mode = 2
+text = "Telemetry"
+
+[node name="Cam" type="TextureRect" parent="SlotB"]
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Graph" type="MarginContainer" parent="SlotB"]
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="Box" type="PanelContainer" parent="SlotB/Graph"]
+layout_mode = 2
+theme_override_styles/panel = ExtResource("3")
+
+[node name="View" type="Control" parent="SlotB/Graph/Box"]
+layout_mode = 2
+size_flags_vertical = 3
+script = ExtResource("2")
+
+[node name="Telem" type="MarginContainer" parent="SlotB"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="Box" parent="SlotB/Telem" instance=ExtResource("4")]
+layout_mode = 2

@@ -1,0 +1,11 @@
+# gdlint config for the Godot client. House code style; 100-col default matches
+# gdformat --line-length in CI (keep the two in sync).
+max-line-length: 100
+max-file-lines: 1000
+tab-characters: 1
+trailing-whitespace: true
+class-name: '([A-Z][a-z0-9]*)+'
+function-name: '_?[a-z][a-z0-9]*(_[a-z0-9]+)*'
+sub-class-name: '_?([A-Z][a-z0-9]*)+'
+signal-name: '[a-z][a-z0-9]*(_[a-z0-9]+)*'
+constant-name: '[A-Z][A-Z0-9]*(_[A-Z0-9]+)*'

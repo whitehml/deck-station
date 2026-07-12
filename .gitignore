@@ -1,0 +1,17 @@
+# Godot
+godot/.godot/
+godot/export/
+
+# Bridge build artifacts
+rust/target/
+
+# Staged GDExtension libs (copied into godot/bin/ by `cargo xtask stage`)
+godot/bin/*.so
+godot/bin/*.dylib
+godot/bin/*.dll
+
+# Standalone export output
+build/
+
+# Core built through the submodule
+external/robocol/target/

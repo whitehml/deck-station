@@ -1,7 +1,12 @@
 # Deck Station
 
-Native replacement for the FTC Driver Station app, targeting primarialy the Steam Deck, nominally operable in desktop environments.
+Native replacement for the FTC Driver Station app, targeting primarily the
+Steam Deck, nominally operable in desktop environments.
 See `CONTROLS.md` for the full input map.
+
+> [!WARNING]
+> **For development/outreach/practice use only — NOT COMPETITION LEGAL.** Do
+> not attempt to use this driver station in official FTC competition.
 
 This is the app you run on the Steam Deck to drive the robot: the on-screen
 interface, the gamepad and camera plumbing, and everything needed to package it
@@ -22,14 +27,15 @@ them together. Get them one of two ways:
 ### Download a release
 
 _(TODO — no releases published yet)._ Grab the latest Linux release,
-`deck-station-x86_64.tar.gz` from the GitHub **Releases** page. Unpack it on the deck/target environment.
+`deck-station-x86_64.tar.gz` from the GitHub **Releases** page. Unpack it on
+the deck/target environment.
 
 ```sh
 mkdir -p ~/deck && tar -xzf deck-station-x86_64.tar.gz -C ~/deck
 ```
 
-OR
- 
+<p align="center"><strong>— OR —</strong></p>
+
 ### Build from source
 
 Install the toolchain first:
@@ -65,7 +71,7 @@ back-grip bindings:
 
 Return to Gaming Mode and launch from **Library ▸ Play**.
 
-Join the Control Hub's WiFi and launch the app, it should auto-connect to the 
+Join the Control Hub's WiFi and launch the app, it should auto-connect to the
 Control Hub.
 
 ## Desktop Environment (Any OS)
@@ -76,7 +82,7 @@ or on Linux unpack the release tarball and run `./deck-station.x86_64` directly.
 
 Without Steam Input there are no back grips — their four actions map to plain
 keyboard keys (L4 → `F1`, L5 → `F2`, R4 → `F3`, R5 → `F4`), and the cursor is
-just your mouse. Plug in any xinput pad for robot control;
+just your mouse. Plug in any xinput pad for robot control.
 
 ---
 

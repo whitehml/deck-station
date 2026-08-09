@@ -1,6 +1,6 @@
 class_name AppThemes
 
-const NAMES := ["Godot", "Mars", "M.A.R.S."]
+const NAMES := ["Godot", "Mars", "M.A.R.S.", "Botsburgh"]
 
 const PANEL_MARGIN := Vector4(8, 6, 8, 6)
 const BUTTON_MARGIN := Vector4(10, 6, 10, 6)
@@ -15,6 +15,7 @@ const BACKGROUND_COLORS := [
 	Color(0.2, 0.2, 0.2, 1),  # Godot: default grey
 	Color(0.12, 0.22, 0.14, 1),  # Mars: dark green
 	Color(0.22, 0.12, 0.14, 1),  # M.A.R.S.: dark red
+	Color(0.1, 0.11, 0.13, 1),  # Botsburgh: steel black
 ]
 
 
@@ -27,6 +28,10 @@ static func for_index(index: int) -> Theme:
 		2:  # M.A.R.S.: red on black
 			return _accent_theme(
 				Color(1.0, 0.2, 0.35), Color(0.09, 0.03, 0.04), Color(1.0, 0.85, 0.88)
+			)
+		3:  # Botsburgh: Pittsburgh gold on black
+			return _accent_theme(
+				Color(1.0, 0.714, 0.071), Color(0.035, 0.04, 0.05), Color(0.93, 0.95, 0.97)
 			)
 		_:
 			return _default_theme()
@@ -47,10 +52,10 @@ static func _default_theme() -> Theme:
 		_repadded(default.get_stylebox("panel", "PanelContainer"), PANEL_MARGIN)
 	)
 	for type in BUTTON_TYPES:
-	for state in ["normal", "hover", "pressed", "focus", "disabled"]:
-		theme.set_stylebox(
+		for state in ["normal", "hover", "pressed", "focus", "disabled"]:
+			theme.set_stylebox(
 				state, type, _repadded(default.get_stylebox(state, type), BUTTON_MARGIN)
-		)
+			)
 	return theme
 
 

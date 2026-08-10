@@ -59,6 +59,9 @@ func _ready() -> void:
 	RobotClient.phase_changed.connect(_on_phase_changed)
 	RobotClient.selected_opmode_changed.connect(_on_selected_opmode_changed)
 	RobotClient.battery_voltage_changed.connect(_on_battery_voltage)
+	RobotClient.opmode_error_changed.connect(_on_opmode_error_changed)
+	%ErrorDismiss.pressed.connect(RobotClient.clear_opmode_error)
+	_on_opmode_error_changed(RobotClient.opmode_error)
 	GamepadBridge.slot_changed.connect(_on_slot_changed)
 	GamepadBridge.claims_changed.connect(_on_claims_changed)
 	Input.joy_connection_changed.connect(_on_joy_connection_changed)
@@ -357,6 +360,11 @@ func _slot_letter(slot_n: int) -> String:
 
 func _on_battery_voltage(volts: float) -> void:
 	%BatteryLabel.text = "%0.2f V" % volts
+
+
+func _on_opmode_error_changed(text: String) -> void:
+	%ErrorText.text = text
+	%ErrorBanner.visible = not text.is_empty()
 
 
 func _update_clock() -> void:

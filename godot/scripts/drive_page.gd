@@ -12,14 +12,14 @@ var sources: Array[int] = [Source.WEBCAM, Source.TELEMETRY]  # [left, right]
 var _radial_slot := -1  # slot whose source radial is currently open
 var _graph_keys := PackedStringArray()
 var _graph_window := 10.0
-var _telemetry_text := ""
+var _telemetry_entries: Array = []
 var _cam_textures := {}  # feed name -> Texture2D
 
 var _cam: Array = []
 var _graph: Array = []
 var _telem: Array = []
 var _graph_view: Array = []
-var _telem_text: Array = []
+var _telem_box: Array = []
 var _header: Array = []
 
 @onready var _slots: Array[Control] = [%SlotA, %SlotB]
@@ -31,7 +31,7 @@ func _ready() -> void:
 		_graph.append(slot.get_node("Graph"))
 		_telem.append(slot.get_node("Telem"))
 		_graph_view.append(slot.get_node("Graph/Box/View"))
-		_telem_text.append(slot.get_node("Telem/Box/Text"))
+		_telem_box.append(slot.get_node("Telem/Box"))
 		_header.append(slot.get_node("Header"))
 	RobotClient.telemetry_received.connect(_on_telemetry)
 	RobotClient.video_frame.connect(_on_frame)
@@ -110,7 +110,7 @@ func _apply_source(slot: int, source: int) -> void:
 		view.keys = _graph_keys
 		view.window_seconds = _graph_window
 	elif source == Source.TELEMETRY:
-		_telem_text[slot].text = _telemetry_text
+		_telem_box[slot].set_entries(_telemetry_entries)
 	_header[slot].text = header
 
 
@@ -131,10 +131,10 @@ func _source_slices(slot: int) -> Array:
 
 
 func _on_telemetry(entries: Array) -> void:
-	_telemetry_text = RobotClient.format_telemetry(entries)
+	_telemetry_entries = entries
 	for i in 2:
 		if _slots[i].visible and sources[i] == Source.TELEMETRY:
-			_telem_text[i].text = _telemetry_text
+			_telem_box[i].set_entries(entries)
 
 
 func _on_frame(source_name: String, texture: Texture2D) -> void:

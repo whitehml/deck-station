@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/drive_page.tscn" id="2"]
@@ -8,6 +8,15 @@
 [ext_resource type="Script" path="res://scripts/radial_menu.gd" id="6"]
 
 [sub_resource type="ButtonGroup" id="ButtonGroup_tabs"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_error"]
+content_margin_left = 12.0
+content_margin_top = 8.0
+content_margin_right = 12.0
+content_margin_bottom = 8.0
+bg_color = Color(0.35, 0.08, 0.08, 1)
+border_width_left = 4
+border_color = Color(1, 0.3, 0.3, 1)
 
 [node name="Main" type="Control"]
 anchors_preset = 15
@@ -119,6 +128,35 @@ unique_name_in_owner = true
 layout_mode = 2
 flat = false
 text = "Settings"
+
+[node name="ErrorBanner" type="PanelContainer" parent="Layout"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_error")
+
+[node name="ErrorRow" type="HBoxContainer" parent="Layout/ErrorBanner"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="ErrorScroll" type="ScrollContainer" parent="Layout/ErrorBanner/ErrorRow"]
+custom_minimum_size = Vector2(0, 96)
+layout_mode = 2
+size_flags_horizontal = 3
+horizontal_scroll_mode = 0
+
+[node name="ErrorText" type="Label" parent="Layout/ErrorBanner/ErrorRow/ErrorScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 0.85, 0.85, 1)
+autowrap_mode = 3
+
+[node name="ErrorDismiss" type="Button" parent="Layout/ErrorBanner/ErrorRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 0
+text = "Dismiss"
 
 [node name="Pages" type="Control" parent="Layout"]
 layout_mode = 2

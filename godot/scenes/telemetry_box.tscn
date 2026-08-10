@@ -1,10 +1,40 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="StyleBoxFlat" path="res://themes/pane_box.tres" id="1"]
+[ext_resource type="Script" path="res://scripts/telemetry_box.gd" id="2"]
 
 [node name="Box" type="PanelContainer"]
 theme_override_styles/panel = ExtResource("1")
+script = ExtResource("2")
 
-[node name="Text" type="RichTextLabel" parent="."]
+[node name="Rows" type="VBoxContainer" parent="."]
 layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="FirstRow" type="HBoxContainer" parent="Rows"]
+layout_mode = 2
+
+[node name="FirstLine" type="RichTextLabel" parent="Rows/FirstRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
+
+[node name="SystemToggle" type="Button" parent="Rows/FirstRow"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 12
+toggle_mode = true
+button_pressed = true
+text = "System"
+
+[node name="Text" type="RichTextLabel" parent="Rows"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
 bbcode_enabled = true

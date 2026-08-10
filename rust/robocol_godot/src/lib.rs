@@ -41,7 +41,7 @@ use godot::prelude::*;
 
 use robocol::client::{ClientConfig, Event, RobocolClient};
 use robocol::cmd::{self, ConfigMeta, OpModeMeta};
-use robocol::packets::{Gamepad, BATTERY_LEVEL_KEY, SYSTEM_KEY_PREFIX};
+use robocol::packets::{Gamepad, BATTERY_LEVEL_KEY, RC_BATTERY_STATUS_KEY, SYSTEM_KEY_PREFIX};
 use robocol::types::GamepadType;
 use robocol::video::{self, StreamConfig, VideoEvent};
 
@@ -417,7 +417,7 @@ impl RobocolBridge {
     }
 
     fn set_phase(&mut self, phase: i64, opmode: &str) {
-        if phase != self.phase || opmode != self.current_opmode {
+        if phase == Self::PHASE_INIT && (phase != self.phase || opmode != self.current_opmode) {
             self.telemetry_by_tag.clear();
         }
         self.phase = phase;
@@ -521,7 +521,7 @@ impl RobocolBridge {
                 };
                 let mut entries = VarArray::new();
                 for (key, value) in &t.strings {
-                    if key == BATTERY_LEVEL_KEY {
+                    if key == BATTERY_LEVEL_KEY || key == RC_BATTERY_STATUS_KEY {
                         continue;
                     }
                     if key.starts_with(SYSTEM_KEY_PREFIX) {

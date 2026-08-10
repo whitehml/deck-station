@@ -24,8 +24,8 @@ var _auto_header_text := ""
 var _tele_header_text := ""
 var _group_radial_open := false
 
-@onready var _auto_telem_text = %AutoTelem.get_node("Box/Text")
-@onready var _tele_telem_text = %TeleTelem.get_node("Box/Text")
+@onready var _auto_telem_box = %AutoTelem.get_node("Box")
+@onready var _tele_telem_box = %TeleTelem.get_node("Box")
 
 
 func _ready() -> void:
@@ -197,6 +197,5 @@ func _flavor_of(opmode_name: String) -> String:
 func _on_telemetry(entries: Array) -> void:
 	if RobotClient.phase != RobotClient.Phase.INIT:
 		return
-	var text := RobotClient.format_telemetry(entries)
-	_auto_telem_text.text = text
-	_tele_telem_text.text = text
+	_auto_telem_box.set_entries(entries)
+	_tele_telem_box.set_entries(entries)

@@ -5,6 +5,8 @@ signal opmode_list_changed(opmodes: Array)
 signal phase_changed(phase: int, opmode_name: String)
 signal selected_opmode_changed(opmode_name: String)
 signal telemetry_received(entries: Array)
+signal opmode_error_changed(text: String)
+signal system_telemetry_shown_changed(shown: bool)
 signal active_config_changed(config: Dictionary)
 signal configurations_changed(configs: Array)
 signal configuration_received(xml: String)
@@ -34,6 +36,8 @@ var selected_opmode := ""
 var opmodes: Array = []
 var configurations: Array = []
 var active_configuration: Dictionary = {}
+var opmode_error := ""
+var show_system_telemetry := true
 
 var _reselect_after_stop := ""
 var _bridge = null
@@ -57,6 +61,7 @@ func _ready() -> void:
 	_bridge.opmode_list_changed.connect(_on_bridge_opmode_list)
 	_bridge.phase_changed.connect(_on_bridge_phase_changed)
 	_bridge.telemetry_received.connect(_on_bridge_telemetry)
+	_bridge.stacktrace_received.connect(_on_bridge_stacktrace)
 	_bridge.active_config_changed.connect(_on_bridge_active_config)
 	_bridge.configurations_changed.connect(_on_bridge_configurations)
 	_bridge.configuration_received.connect(_on_bridge_configuration)
@@ -116,7 +121,15 @@ func select_opmode(opmode_name: String) -> void:
 
 
 func init_opmode() -> void:
+	clear_opmode_error()
 	_bridge.init_opmode()
+
+
+func clear_opmode_error() -> void:
+	if opmode_error.is_empty():
+		return
+	opmode_error = ""
+	opmode_error_changed.emit("")
 
 
 func start_opmode() -> void:
@@ -136,14 +149,24 @@ func nav_active() -> bool:
 	return GripInput.ui_nav_active or phase in [Phase.IDLE, Phase.DISCONNECTED]
 
 
+func set_show_system_telemetry(shown: bool) -> void:
+	if shown == show_system_telemetry:
+		return
+	show_system_telemetry = shown
+	system_telemetry_shown_changed.emit(shown)
+
+
+## System entries lead, in yellow; opmode telemetry follows in its own order.
 func format_telemetry(entries: Array) -> String:
+	var system := PackedStringArray()
 	var lines := PackedStringArray()
 	for e in entries:
 		if e.phase == "SYSTEM":
-			lines.append("[color=yellow][!] %s[/color]" % e.key)
+			if show_system_telemetry:
+				system.append("[color=yellow]%s[/color]" % e.key)
 			continue
 		lines.append(e.key if str(e.value).is_empty() else "%s: %s" % [e.key, e.value])
-	return "\n".join(lines)
+	return "\n".join(system + lines)
 
 
 func request_active_config() -> void:
@@ -238,6 +261,11 @@ func _on_bridge_phase_changed(new_phase: int, opmode_name: String) -> void:
 
 func _on_bridge_telemetry(entries: Array) -> void:
 	telemetry_received.emit(entries)
+
+
+func _on_bridge_stacktrace(text: String) -> void:
+	opmode_error = text.strip_edges()
+	opmode_error_changed.emit(opmode_error)
 
 
 func _on_bridge_active_config(config: Dictionary) -> void:

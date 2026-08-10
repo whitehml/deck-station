@@ -1,5 +1,7 @@
 extends Node
 
+const CRASH_OPMODE := "Crash Test"
+
 
 func _ready() -> void:
 	print("SMOKE backend: ", "fake_rc" if OS.get_environment("DECK_DS_MOCK") == "1" else "real RC")
@@ -31,6 +33,7 @@ func _ready() -> void:
 	while RobotClient.phase != RobotClient.Phase.IDLE:
 		await RobotClient.phase_changed
 
+	await _smoke_opmode_crash()
 	await _smoke_config_crud()
 	await _smoke_battery_voltage()
 	await _smoke_video()
@@ -57,6 +60,46 @@ func _trigger_and_capture(sig: Signal, action: Callable) -> Variant:
 	while not state.got:
 		await get_tree().process_frame
 	return state.result
+
+
+## fake_rc's "Crash Test" OpMode throws a couple of seconds into the run and
+## the RC stops it immediately — the error has to outlive that teardown.
+func _smoke_opmode_crash() -> void:
+	if not RobotClient.opmodes.any(func(o: Dictionary) -> bool: return o.name == CRASH_OPMODE):
+		print("SMOKE crash test skipped: no ", CRASH_OPMODE, " OpMode")
+		return
+
+	RobotClient.select_opmode(CRASH_OPMODE)
+	RobotClient.init_opmode()
+	while RobotClient.phase != RobotClient.Phase.INIT:
+		await RobotClient.phase_changed
+	RobotClient.start_opmode()
+	while RobotClient.phase != RobotClient.Phase.RUNNING:
+		await RobotClient.phase_changed
+
+	var error: String = await RobotClient.opmode_error_changed
+	print("SMOKE crash error: ", error)
+	assert(error.contains("NullPointerException"))
+
+	while RobotClient.phase != RobotClient.Phase.IDLE:
+		await RobotClient.phase_changed
+	await get_tree().create_timer(0.5).timeout
+	assert(RobotClient.opmode_error == error)
+
+	var telemetry: Array = await RobotClient.telemetry_received
+	var text := RobotClient.format_telemetry(telemetry)
+	print("SMOKE post-crash telemetry: ", text)
+	assert(not text.contains("100.0|true"))
+
+	RobotClient.select_opmode(RobotClient.opmodes[0].name)
+	RobotClient.init_opmode()
+	assert(RobotClient.opmode_error.is_empty())
+	while RobotClient.phase != RobotClient.Phase.INIT:
+		await RobotClient.phase_changed
+	RobotClient.stop_opmode()
+	while RobotClient.phase != RobotClient.Phase.IDLE:
+		await RobotClient.phase_changed
+	print("SMOKE crash error cleared on next init")
 
 
 func _smoke_config_crud() -> void:

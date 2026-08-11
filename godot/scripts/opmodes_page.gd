@@ -1,8 +1,10 @@
 extends VBoxContainer
 
 const AUTONOMOUS := "AUTONOMOUS"
+const SYSTEM := "SYSTEM"
 const TELEMETRY_HEADER := "Telemetry"
 const UNFILTERED_LABEL := "All"
+const DEFAULT_GROUP := "$$$$$$$"
 
 const ACTION_LABELS := {
 	RobotClient.Phase.IDLE: "INIT",
@@ -45,10 +47,19 @@ func _on_opmode_list(opmodes: Array) -> void:
 	_rebuild_lists(opmodes)
 
 
+func _selectable(opmodes: Array) -> Array:
+	return opmodes.filter(func(opmode): return opmode.get("flavor", "") != SYSTEM)
+
+
+func _group_of(opmode: Dictionary) -> String:
+	var group: String = opmode.get("group", "")
+	return "" if group == DEFAULT_GROUP else group
+
+
 func _rebuild_group_filter(opmodes: Array) -> void:
 	var groups := {}
-	for opmode in opmodes:
-		var g: String = opmode.get("group", "")
+	for opmode in _selectable(opmodes):
+		var g := _group_of(opmode)
 		if not g.is_empty():
 			groups[g] = true
 	var names := groups.keys()
@@ -69,8 +80,8 @@ func _rebuild_lists(opmodes: Array) -> void:
 	for list in [%AutoList, %TeleList]:
 		for child in list.get_children():
 			child.queue_free()
-	for opmode in opmodes:
-		if not _group_filter.is_empty() and opmode.get("group", "") != _group_filter:
+	for opmode in _selectable(opmodes):
+		if not _group_filter.is_empty() and _group_of(opmode) != _group_filter:
 			continue
 		var column: VBoxContainer = %AutoList if _is_auto(opmode) else %TeleList
 		var op_name: String = opmode.get("name", "")

@@ -1,0 +1,62 @@
+name: release
+
+on:
+  push:
+    branches: [main]
+    tags: ["DS-*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      tag: ${{ steps.v.outputs.tag }}
+      prerelease: ${{ steps.v.outputs.prerelease }}
+    steps:
+      - id: v
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            echo "version=${GITHUB_REF_NAME#DS-}" >> "$GITHUB_OUTPUT"
+            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=main-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+            echo "tag=latest" >> "$GITHUB_OUTPUT"
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    needs: version
+    uses: ./.github/workflows/build.yml
+    with:
+      version: ${{ needs.version.outputs.version }}
+
+  publish:
+    needs: [version, build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - name: Publish
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.version.outputs.tag }}
+          name: >-
+            ${{ needs.version.outputs.prerelease == 'true'
+                && format('Latest main ({0})', needs.version.outputs.version)
+                || needs.version.outputs.tag }}
+          prerelease: ${{ needs.version.outputs.prerelease }}
+          # The rolling "latest" release is re-pointed at each main build.
+          make_latest: ${{ needs.version.outputs.prerelease == 'true' && 'false' || 'true' }}
+          files: dist/*
+          fail_on_unmatched_files: true
+          body: >-
+            Built from ${{ needs.version.outputs.version }}.
+            Each bundle contains the app binary and its `robocol_godot` bridge library —
+            keep the two in the same directory.

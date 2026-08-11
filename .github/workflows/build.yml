@@ -1,0 +1,109 @@
+name: build
+
+# Reusable: builds the bridge on each host OS, then runs both Godot exports on
+# Linux (Godot cross-exports Windows; no wine/rcedit needed since the preset has
+# modify_resources=false and codesign off). Emits a "dist" artifact.
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: Version string used in the package filenames
+        type: string
+        required: true
+
+env:
+  CARGO_TERM_COLOR: always
+  GODOT_VERSION: 4.4.1
+
+jobs:
+  bridge:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact: bridge-linux
+            lib: godot/bin/librobocol_godot.so
+          - os: windows-latest
+            artifact: bridge-windows
+            lib: godot/bin/robocol_godot.dll
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive # external/robocol
+      - name: Install pinned Rust (from rust-toolchain.toml)
+        working-directory: rust
+        run: rustup show
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+          key: ${{ matrix.os }}
+      - name: Build + stage bridge (release)
+        working-directory: rust
+        run: cargo xtask stage --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.lib }}
+          if-no-files-found: error
+
+  export:
+    needs: bridge
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - name: Fetch staged bridge libs
+        uses: actions/download-artifact@v4
+        with:
+          path: godot/bin
+          pattern: bridge-*
+          merge-multiple: true
+      - name: Set up Godot
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: ${{ env.GODOT_VERSION }}
+          use-dotnet: false
+      # setup-godot does not reliably leave templates where the exporter looks
+      # for them; install them explicitly at the exact expected path.
+      - name: Install export templates
+        run: |
+          tpz="Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          dest="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          curl -fsSL -o "$tpz" \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/${tpz}"
+          unzip -q "$tpz" -d /tmp/godot-templates
+          mkdir -p "$dest"
+          mv /tmp/godot-templates/templates/* "$dest/"
+      - name: Import project
+        run: godot --headless --path godot --import
+      - name: Export
+        run: |
+          mkdir -p build
+          godot --headless --path godot --export-release "Linux"
+          godot --headless --path godot --export-release "Windows Desktop"
+      - name: Package
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist stage/linux stage/windows
+
+          # The exporter drops each platform's bridge lib next to its binary.
+          cp build/deck-station.x86_64 build/librobocol_godot.so stage/linux/
+          tar -czf "dist/deck-station-${VERSION}-linux-x86_64.tar.gz" -C stage/linux .
+
+          cp build/deck-station.exe build/robocol_godot.dll stage/windows/
+          # The Windows preset enables the console wrapper; ship it if produced.
+          cp build/deck-station.console.exe stage/windows/ 2>/dev/null || true
+          (cd stage/windows && zip -qr "../../dist/deck-station-${VERSION}-windows-x86_64.zip" .)
+
+          (cd dist && sha256sum ./* > SHA256SUMS)
+          ls -l dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error

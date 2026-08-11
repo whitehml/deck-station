@@ -26,13 +26,17 @@ them together. Get them one of two ways:
 
 ### Download a release
 
-_(TODO — no releases published yet)._ Grab the latest Linux release,
-`deck-station-x86_64.tar.gz` from the GitHub **Releases** page. Unpack it on
-the deck/target environment.
+Grab `deck-station-<version>-linux-x86_64.tar.gz` from the GitHub **Releases**
+page and unpack it on the deck/target environment.
 
 ```sh
-mkdir -p ~/deck && tar -xzf deck-station-x86_64.tar.gz -C ~/deck
+mkdir -p ~/deck && tar -xzf deck-station-*-linux-x86_64.tar.gz -C ~/deck
 ```
+
+Releases tagged `DS-<sdk>.<patch>` are the stable ones; the rolling `latest`
+prerelease is rebuilt from `main` on every push. Windows builds ship alongside
+as `deck-station-<version>-windows-x86_64.zip` (`deck-station.exe` +
+`robocol_godot.dll`). `SHA256SUMS` covers every bundle.
 
 <p align="center"><strong>— OR —</strong></p>
 

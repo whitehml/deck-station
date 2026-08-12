@@ -1,13 +1,14 @@
 name: build
 
-# Reusable: builds the bridge on each host OS, then runs both Godot exports on
-# Linux (Godot cross-exports Windows; no wine/rcedit needed since the preset has
-# modify_resources=false and codesign off). Emits a "dist" artifact.
+# Reusable: builds the bridge and the launcher stub on each host OS, then runs
+# both Godot exports on Linux (Godot cross-exports Windows; no wine/rcedit
+# needed since the preset has modify_resources=false and codesign off). Emits a
+# "dist" artifact.
 on:
   workflow_call:
     inputs:
       version:
-        description: Version string used in the package filenames
+        description: Version string stamped into the build and the package names
         type: string
         required: true
 
@@ -16,17 +17,19 @@ env:
   GODOT_VERSION: 4.4.1
 
 jobs:
-  bridge:
+  native:
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
-            artifact: bridge-linux
-            lib: godot/bin/librobocol_godot.so
+            artifact: native-linux
+            lib: librobocol_godot.so
+            launcher: launcher
           - os: windows-latest
-            artifact: bridge-windows
-            lib: godot/bin/robocol_godot.dll
+            artifact: native-windows
+            lib: robocol_godot.dll
+            launcher: launcher.exe
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
@@ -42,25 +45,43 @@ jobs:
       - name: Build + stage bridge (release)
         working-directory: rust
         run: cargo xtask stage --release
+      - name: Build launcher (release)
+        working-directory: rust
+        run: cargo build -p launcher --release
+      - name: Collect
+        shell: bash
+        run: |
+          mkdir -p native
+          cp "godot/bin/${{ matrix.lib }}" native/
+          cp "rust/target/release/${{ matrix.launcher }}" native/
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: ${{ matrix.lib }}
+          path: native/
           if-no-files-found: error
 
   export:
-    needs: bridge
+    needs: native
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
         with:
           submodules: recursive
-      - name: Fetch staged bridge libs
+      # Distinct filenames per OS, so merging the two legs is unambiguous.
+      - name: Fetch native artifacts
         uses: actions/download-artifact@v4
         with:
-          path: godot/bin
-          pattern: bridge-*
+          path: native
+          pattern: native-*
           merge-multiple: true
+      - name: Stage bridge libs
+        run: cp native/librobocol_godot.so native/robocol_godot.dll godot/bin/
+      # The updater compares this against the version on the release page, so it
+      # has to be baked in before the project is imported.
+      - name: Stamp version
+        env:
+          VERSION: ${{ inputs.version }}
+        run: sed -i "s|^config/version=.*|config/version=\"${VERSION}\"|" godot/project.godot
       - name: Set up Godot
         uses: chickensoft-games/setup-godot@v2
         with:
@@ -84,20 +105,32 @@ jobs:
           mkdir -p build
           godot --headless --path godot --export-release "Linux"
           godot --headless --path godot --export-release "Windows Desktop"
+      # Each bundle unpacks to the install layout the launcher expects: the stub
+      # and installed.json at the root, the app + bridge under versions/.
       - name: Package
         env:
           VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
-          mkdir -p dist stage/linux stage/windows
+          mkdir -p dist stage/linux/versions/"$VERSION" stage/windows/versions/"$VERSION"
 
-          # The exporter drops each platform's bridge lib next to its binary.
-          cp build/deck-station.x86_64 build/librobocol_godot.so stage/linux/
-          tar -czf "dist/deck-station-${VERSION}-linux-x86_64.tar.gz" -C stage/linux .
+          cp build/deck-station.x86_64 build/librobocol_godot.so \
+            stage/linux/versions/"$VERSION"/
+          cp native/launcher stage/linux/deck-station.x86_64
+          chmod +x stage/linux/deck-station.x86_64 \
+            stage/linux/versions/"$VERSION"/deck-station.x86_64
 
-          cp build/deck-station.exe build/robocol_godot.dll stage/windows/
+          cp build/deck-station.exe build/robocol_godot.dll \
+            stage/windows/versions/"$VERSION"/
           # The Windows preset enables the console wrapper; ship it if produced.
-          cp build/deck-station.console.exe stage/windows/ 2>/dev/null || true
+          cp build/deck-station.console.exe stage/windows/versions/"$VERSION"/ 2>/dev/null || true
+          cp native/launcher.exe stage/windows/deck-station.exe
+
+          for os in linux windows; do
+            printf '{"schema": 1, "current": "%s"}\n' "$VERSION" > stage/$os/installed.json
+          done
+
+          tar -czf "dist/deck-station-${VERSION}-linux-x86_64.tar.gz" -C stage/linux .
           (cd stage/windows && zip -qr "../../dist/deck-station-${VERSION}-windows-x86_64.zip" .)
 
           (cd dist && sha256sum ./* > SHA256SUMS)

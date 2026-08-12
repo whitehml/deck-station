@@ -58,5 +58,7 @@ jobs:
           fail_on_unmatched_files: true
           body: >-
             Built from ${{ needs.version.outputs.version }}.
-            Each bundle contains the app binary and its `robocol_godot` bridge library —
-            keep the two in the same directory.
+            Unpack a bundle into an empty directory and run the `deck-station`
+            launcher at its root; it hands off to the build under `versions/`.
+            Once installed, update from **Settings ▸ Check for Updates…** instead
+            of downloading again.

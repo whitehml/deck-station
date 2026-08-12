@@ -24,14 +24,17 @@ const SLOT_COLORS := {1: Color.GREEN_YELLOW, 2: Color.ORANGE}
 
 const PAGE_ORDER: Array[StringName] = [&"drive", &"graphs", &"opmodes", &"config"]
 
-## Settings-menu item id, kept clear of the theme submenu's 0-based ids.
-const QUIT_ID := 1000
+## Settings-menu item ids, kept clear of the theme submenu's 0-based ids.
+const UPDATE_ID := 1000
+const QUIT_ID := 1001
 const SETTINGS_PATH := "user://settings.cfg"
+const UPDATER := preload("res://scripts/updater.gd")
 
 var _current_page: StringName = &"drive"
 var _slot_radial_open := false
 var _theme_index := 0
 var _quit_dialog: ConfirmationDialog
+var _updater: Node
 var _clock_idle := false
 
 @onready var _pages := {
@@ -146,8 +149,12 @@ func _setup_settings_menu() -> void:
 	popup.add_submenu_item("Themes", "ThemesMenu")
 
 	popup.add_separator()
+	popup.add_item("Check for Updates…", UPDATE_ID)
 	popup.add_item("Quit", QUIT_ID)
 	popup.id_pressed.connect(_on_settings_id)
+
+	_updater = UPDATER.new()
+	add_child(_updater)
 
 	_quit_dialog = ConfirmationDialog.new()
 	_quit_dialog.title = "Quit"
@@ -160,6 +167,8 @@ func _setup_settings_menu() -> void:
 func _on_settings_id(id: int) -> void:
 	if id == QUIT_ID:
 		_quit_dialog.popup_centered()
+	elif id == UPDATE_ID:
+		_updater.run()
 
 
 func _select_theme(index: int) -> void:

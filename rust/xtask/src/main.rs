@@ -34,11 +34,22 @@ fn print_help() {
          stage [--release]   Build robocol_godot and copy the lib into godot/bin/\n\
          dev                 stage (debug) -> godot4 --path godot\n\
          mock                stage (debug) + build fake_rc -> DECK_DS_MOCK=1 godot4\n\
-         export              stage (release) -> godot4 --headless --export-release Linux\n\
+         export              stage (release) + launcher -> Godot export, assembled\n\
+         \x20                   into build/ as stub + versions/<version>/\n\
          lint                gdformat --check + gdlint over godot/\n\
          clean               remove staged libs from godot/bin/"
     );
 }
+
+#[cfg(windows)]
+const APP_BINARY: &str = "deck-station.exe";
+#[cfg(not(windows))]
+const APP_BINARY: &str = "deck-station.x86_64";
+
+#[cfg(windows)]
+const LAUNCHER_BINARY: &str = "launcher.exe";
+#[cfg(not(windows))]
+const LAUNCHER_BINARY: &str = "launcher";
 
 struct LibNames {
     built: &'static str,
@@ -118,10 +129,54 @@ fn mock() -> Result {
 
 fn export() -> Result {
     stage(true)?;
+
+    let mut launcher = Command::new("cargo");
+    launcher
+        .current_dir(workspace())
+        .args(["build", "-p", "launcher", "--release"]);
+    run(launcher, "cargo build launcher")?;
+
+    let build = repo_root().join("build");
+    fs::create_dir_all(&build)?;
     run(
         godot(&["--headless", "--export-release", "Linux"]),
         "godot export",
-    )
+    )?;
+
+    let version = project_version()?;
+    let version_dir = build.join("versions").join(&version);
+    fs::create_dir_all(&version_dir)?;
+
+    let n = lib_names();
+    let app = format!("{}.{}", n.prefix, n.ext);
+    for file in [APP_BINARY, app.as_str()] {
+        fs::rename(build.join(file), version_dir.join(file))
+            .map_err(|e| format!("move {file} into {}: {e}", version_dir.display()))?;
+    }
+
+    fs::copy(
+        repo_root()
+            .join("rust/target/release")
+            .join(LAUNCHER_BINARY),
+        build.join(APP_BINARY),
+    )?;
+    fs::write(
+        build.join("installed.json"),
+        format!("{{\"schema\": 1, \"current\": \"{version}\"}}\n"),
+    )?;
+
+    println!("exported {version} -> {}", build.display());
+    Ok(())
+}
+
+fn project_version() -> Result<String> {
+    let path = repo_root().join("godot/project.godot");
+    let text = fs::read_to_string(&path)?;
+    text.lines()
+        .find_map(|line| line.strip_prefix("config/version="))
+        .map(|v| v.trim().trim_matches('"').to_string())
+        .filter(|v| !v.is_empty())
+        .ok_or_else(|| format!("no config/version in {}", path.display()).into())
 }
 
 fn lint() -> Result {

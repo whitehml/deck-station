@@ -19,24 +19,43 @@ WiFi using the `robocol` protocol.
 
 ## Steam Deck
 
-The Deck runs Linux x86_64. The app is always two files kept side by side:
-`deck-station.x86_64` (the Godot executable) plus `librobocol_godot.so` (the
-native robocol bridge, a GDExtension Godot loads at runtime). A release ships
-them together. Get them one of two ways:
+The Deck runs Linux x86_64. A bundle unpacks to a small tree: the
+`deck-station.x86_64` launcher and `installed.json` at the root, over the build
+itself — the Godot executable plus `librobocol_godot.so`, the native robocol
+bridge Godot loads at runtime — under `versions/<version>/`.
+
+```
+~/deck/
+    deck-station.x86_64              <- run/shortcut this; it never moves
+    installed.json
+    versions/<version>/
+        deck-station.x86_64
+        librobocol_godot.so
+```
+
+The launcher hands off to whichever build `installed.json` names, so updates
+drop in a new `versions/` directory without disturbing your Steam shortcut or
+its controller layout. Get it one of two ways:
 
 ### Download a release
 
 Grab `deck-station-<version>-linux-x86_64.tar.gz` from the GitHub **Releases**
-page and unpack it on the deck/target environment.
+page and unpack it into an empty directory on the deck/target environment.
 
 ```sh
 mkdir -p ~/deck && tar -xzf deck-station-*-linux-x86_64.tar.gz -C ~/deck
 ```
 
+After that first install, update in place from **Settings ▸ Check for
+Updates…** — no re-download, no unpacking. It needs internet access, so leave
+the robot's WiFi first; the app says so if you're still connected.
+
 Releases tagged `DS-<sdk>.<patch>` are the stable ones; the rolling `latest`
-prerelease is rebuilt from `main` on every push. Windows builds ship alongside
-as `deck-station-<version>-windows-x86_64.zip` (`deck-station.exe` +
-`robocol_godot.dll`). `SHA256SUMS` covers every bundle.
+prerelease is rebuilt from `main` on every push, and is what the in-app updater
+currently follows. Windows builds ship alongside as
+`deck-station-<version>-windows-x86_64.zip`, same layout with
+`deck-station.exe` + `robocol_godot.dll`. `SHA256SUMS` covers every bundle and
+the updater checks the download against it.
 
 <p align="center"><strong>— OR —</strong></p>
 

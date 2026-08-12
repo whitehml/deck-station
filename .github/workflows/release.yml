@@ -43,6 +43,14 @@ jobs:
         with:
           name: dist
           path: dist
+      - name: Reset the rolling release
+        if: needs.version.outputs.prerelease == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release delete latest --yes --cleanup-tag || true
+          gh api -X DELETE "repos/${GH_REPO}/git/refs/tags/latest" --silent || true
       - name: Publish
         uses: softprops/action-gh-release@v2
         with:

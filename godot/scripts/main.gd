@@ -27,14 +27,17 @@ const PAGE_ORDER: Array[StringName] = [&"drive", &"graphs", &"opmodes", &"config
 ## Settings-menu item ids, kept clear of the theme submenu's 0-based ids.
 const UPDATE_ID := 1000
 const QUIT_ID := 1001
+const CONTROLS_ID := 1002
 const SETTINGS_PATH := "user://settings.cfg"
 const UPDATER := preload("res://scripts/updater.gd")
+const CONTROLS_HELP := preload("res://scripts/controls_help.gd")
 
 var _current_page: StringName = &"drive"
 var _slot_radial_open := false
 var _theme_index := 0
 var _quit_dialog: ConfirmationDialog
 var _updater: Node
+var _controls_help: AcceptDialog
 var _clock_idle := false
 
 @onready var _pages := {
@@ -102,6 +105,25 @@ func _process(_delta: float) -> void:
 		_cycle_page(-1)
 
 
+func _unhandled_key_input(event: InputEvent) -> void:
+	if not (event is InputEventKey) or not event.pressed or event.echo:
+		return
+	if GamepadBridge.is_text_focused():
+		return
+	match event.keycode:
+		KEY_DELETE:
+			_stop()
+		KEY_SPACE:
+			_toggle_graph_pause()
+		_:
+			return
+	get_viewport().set_input_as_handled()
+
+
+func _toggle_graph_pause() -> void:
+	TelemetryLog.paused = not TelemetryLog.paused
+
+
 ## --- Pages ---
 
 
@@ -149,9 +171,13 @@ func _setup_settings_menu() -> void:
 	popup.add_submenu_item("Themes", "ThemesMenu")
 
 	popup.add_separator()
+	popup.add_item("Controls…", CONTROLS_ID)
 	popup.add_item("Check for Updates…", UPDATE_ID)
 	popup.add_item("Quit", QUIT_ID)
 	popup.id_pressed.connect(_on_settings_id)
+
+	_controls_help = CONTROLS_HELP.new()
+	add_child(_controls_help)
 
 	_updater = UPDATER.new()
 	add_child(_updater)
@@ -169,6 +195,8 @@ func _on_settings_id(id: int) -> void:
 		_quit_dialog.popup_centered()
 	elif id == UPDATE_ID:
 		_updater.run()
+	elif id == CONTROLS_ID:
+		_controls_help.popup_centered_ratio(0.8)
 
 
 func _select_theme(index: int) -> void:

@@ -8,9 +8,9 @@ This directory is excluded from the export via `exclude_filter="dev/*"` in
 
 ## Contents
 
-- `dev_smoke.gd` — Headlessly drives the full client lifecycle asserting
-each step across the GDExtension boundary that the Rust-side loopback
-test can't reach. Prints `SMOKE OK` and exits on success.
+- `dev_smoke.gd` — Headlessly drives the full client lifecycle, asserting each
+  step across the GDExtension boundary that the Rust-side loopback test can't
+  reach. Prints `SMOKE OK` and exits on success.
 
 ## Running
 

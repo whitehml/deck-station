@@ -66,8 +66,8 @@ Still in Desktop Mode:
 |---|---|---|
 | L4 / L5 | Key `F1` / `F2` | Left/right pane: tap = step source, hold = radial |
 | R4 | Key `F3` | Tap = STOP · hold = sticks/d-pad drive the UI |
-| R5 | Key `F4` | Tap = click at cursor · hold = slot-swap radial |
-| Trackpads | Mouse / left click | Cursor + click (R5 is primary) |
+| R5 | Key `F4` | Tap = swap gamepad slots · hold = slot-swap radial |
+| Trackpads | Mouse / left click | Cursor + click |
 
 ### Step 3: Connect to the robot
 
@@ -153,6 +153,8 @@ real robot.
 | `DECK_DS_PEER_PORT` | robot Robocol port (default 20884) |
 | `DECK_DS_BIND_PORT` | local port; `0` = ephemeral (default 20884) |
 | `DECK_LIMELIGHT_STREAM` | Limelight stream URL (default: Control Hub address) |
+| `DECK_DS_PAD_DEBUG=1` | log local gamepad input |
+| `DECK_VIDEO_DEBUG` | log camera-stream frame traffic |
 
 ## Linting / CI
 

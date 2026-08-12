@@ -1,8 +1,18 @@
 extends Node
 
 signal keys_changed(keys: Array)
+signal paused_changed(paused: bool)
 
 const MAX_POINTS := 1200
+
+## Global freeze, owned here so a graph that is built or keyed later still comes
+## up matching the rest instead of missing the toggle that flipped them.
+var paused := false:
+	set(value):
+		if value == paused:
+			return
+		paused = value
+		paused_changed.emit(paused)
 
 var _series: Dictionary = {}  # key -> TelemetrySeries
 var _t0_ms := 0

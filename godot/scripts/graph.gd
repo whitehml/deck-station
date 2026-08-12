@@ -1,5 +1,7 @@
+class_name Graph
 extends Control
 
+const GROUP := &"graphs"
 const GRID_LINES := 4
 const GRID_COLOR := Color(1.0, 1.0, 1.0, 0.08)
 const SERIES_COLORS := [
@@ -14,7 +16,7 @@ const SERIES_COLORS := [
 var keys := PackedStringArray():
 	set(value):
 		keys = value
-		_paused = false
+		_frozen_t_max = _latest_time() if _paused else NAN
 		queue_redraw()
 
 var window_seconds := 10.0:
@@ -25,12 +27,15 @@ var window_seconds := 10.0:
 var _hover := false
 var _mouse := Vector2.ZERO
 var _paused := false
-var _frozen_t_max := 0.0
+var _frozen_t_max := NAN
 
 
 func _ready() -> void:
+	add_to_group(GROUP)
 	mouse_entered.connect(func() -> void: _hover = true)
 	mouse_exited.connect(func() -> void: _hover = false)
+	TelemetryLog.paused_changed.connect(set_paused)
+	set_paused(TelemetryLog.paused)
 
 
 func _gui_input(event: InputEvent) -> void:
@@ -44,17 +49,21 @@ func _gui_input(event: InputEvent) -> void:
 
 
 func _toggle_pause() -> void:
-	if keys.is_empty():
+	set_paused(not _paused)
+
+
+## Freezing captures the current time axis. A graph with no data yet still takes
+## the pause; it grabs its axis in _process once the first sample lands.
+func set_paused(value: bool) -> void:
+	if value == _paused:
 		return
-	if _paused:
-		_paused = false
-	else:
-		var t_max := _latest_time()
-		if is_nan(t_max):
-			return
-		_frozen_t_max = t_max
-		_paused = true
+	_paused = value
+	_frozen_t_max = _latest_time() if value else NAN
 	queue_redraw()
+
+
+func is_paused() -> bool:
+	return _paused
 
 
 func _latest_time() -> float:
@@ -69,6 +78,9 @@ func _latest_time() -> float:
 func _process(_delta: float) -> void:
 	if keys.is_empty():
 		return
+	if _paused and is_nan(_frozen_t_max):
+		_frozen_t_max = _latest_time()
+		queue_redraw()
 	if not _paused or _hover:
 		queue_redraw()
 
@@ -87,7 +99,7 @@ func _draw() -> void:
 		)
 		return
 
-	var t_max := _frozen_t_max if _paused else _latest_time()
+	var t_max := _frozen_t_max if _paused and not is_nan(_frozen_t_max) else _latest_time()
 	if is_nan(t_max):
 		draw_string(
 			font, Vector2(12, 24), "waiting for data", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color.GRAY

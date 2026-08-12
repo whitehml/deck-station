@@ -12,6 +12,12 @@ const KB_RIGHT_RING := [KEY_I, KEY_O, KEY_L, KEY_PERIOD, KEY_COMMA, KEY_M, KEY_J
 const KB_LEFT_CENTER := KEY_S
 const KB_RIGHT_CENTER := KEY_K
 
+## Face buttons in the F310's diamond: Y top, A bottom, X left, B right.
+const KB_Y := KEY_T
+const KB_A := KEY_G
+const KB_X := KEY_F
+const KB_B := KEY_H
+
 var slot := 1
 
 var _is_deck := OS.get_environment("SteamDeck") == "1"
@@ -222,10 +228,10 @@ func _keyboard_state() -> Dictionary:
 	state.dpad_down = Input.is_key_pressed(KEY_DOWN)
 	state.dpad_left = Input.is_key_pressed(KEY_LEFT)
 	state.dpad_right = Input.is_key_pressed(KEY_RIGHT)
-	state.a = Input.is_key_pressed(KEY_SPACE)
-	state.b = Input.is_key_pressed(KEY_SHIFT)
-	state.x = Input.is_key_pressed(KEY_F)
-	state.y = Input.is_key_pressed(KEY_H)
+	state.a = Input.is_key_pressed(KB_A)
+	state.b = Input.is_key_pressed(KB_B)
+	state.x = Input.is_key_pressed(KB_X)
+	state.y = Input.is_key_pressed(KB_Y)
 	state.left_bumper = Input.is_key_pressed(KEY_1)
 	state.right_bumper = Input.is_key_pressed(KEY_2)
 	state.left_trigger = 1.0 if Input.is_key_pressed(KEY_3) else 0.0

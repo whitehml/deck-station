@@ -7,17 +7,6 @@ const PHASE_NAMES := {
 	RobotClient.Phase.RUNNING: "RUNNING",
 }
 
-const ACTION_LABELS := {
-	RobotClient.Phase.IDLE: "INIT",
-	RobotClient.Phase.INIT: "START",
-	RobotClient.Phase.RUNNING: "STOP",
-}
-const ACTION_COLORS := {
-	RobotClient.Phase.IDLE: Color(0.55, 0.75, 1.0),
-	RobotClient.Phase.INIT: Color(0.4, 0.9, 0.4),
-	RobotClient.Phase.RUNNING: Color(1, 0.3, 0.3),
-}
-
 const MATCH_SECONDS := 120.0
 const ENDGAME_SECONDS := 30.0
 const SLOT_COLORS := {1: Color.GREEN_YELLOW, 2: Color.ORANGE}
@@ -344,14 +333,7 @@ func _on_selected_opmode_changed(_opmode_name: String) -> void:
 
 
 func _update_action() -> void:
-	var btn: Button = %StopButton
-	var phase: int = RobotClient.phase
-	btn.text = ACTION_LABELS.get(phase, "STOP")
-	btn.add_theme_color_override(&"font_color", ACTION_COLORS.get(phase, Color.WHITE))
-	btn.disabled = (
-		phase == RobotClient.Phase.DISCONNECTED
-		or (phase == RobotClient.Phase.IDLE and RobotClient.selected_opmode.is_empty())
-	)
+	PhaseAction.apply(%StopButton, RobotClient.phase)
 
 
 func _size_action_button() -> void:
@@ -359,7 +341,7 @@ func _size_action_button() -> void:
 	var font := btn.get_theme_font(&"font")
 	var font_size := btn.get_theme_font_size(&"font_size")
 	var widest := 0.0
-	for label: String in ACTION_LABELS.values():
+	for label: String in PhaseAction.LABELS.values():
 		widest = maxf(
 			widest, font.get_string_size(label, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size).x
 		)

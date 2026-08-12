@@ -45,13 +45,14 @@ func _refresh_list() -> void:
 		row.toggle_mode = true
 		row.button_group = _group
 		row.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		if _is_active(meta):
-			row.add_theme_color_override(
-				"font_color", Color.ORANGE if _active_out_of_date else Color.GREEN_YELLOW
-			)
 		row.button_pressed = meta.get("name") == _selected_name
 		row.pressed.connect(_on_config_selected.bind(meta))
 		%ConfigList.add_child(row)
+		if _is_active(meta):
+			var status: StringName = &"warn" if _active_out_of_date else &"ok"
+			row.add_theme_color_override(
+				"font_color", row.get_theme_color(status, AppThemes.STATUS_TYPE)
+			)
 
 
 func _list_label(meta: Dictionary) -> String:

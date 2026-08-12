@@ -6,17 +6,6 @@ const TELEMETRY_HEADER := "Telemetry"
 const UNFILTERED_LABEL := "All"
 const DEFAULT_GROUP := "$$$$$$$"
 
-const ACTION_LABELS := {
-	RobotClient.Phase.IDLE: "INIT",
-	RobotClient.Phase.INIT: "START",
-	RobotClient.Phase.RUNNING: "STOP",
-}
-const ACTION_COLORS := {
-	RobotClient.Phase.IDLE: Color(0.55, 0.75, 1.0),
-	RobotClient.Phase.INIT: Color(0.4, 0.9, 0.4),
-	RobotClient.Phase.RUNNING: Color(1, 0.3, 0.3),
-}
-
 ## Injected by main.gd — the shared full-screen radial overlay.
 var radial: Control
 
@@ -107,13 +96,7 @@ func _on_opmode_selected(opmode_name: String) -> void:
 
 
 func _update_buttons() -> void:
-	var phase: int = RobotClient.phase
-	%ActionButton.text = ACTION_LABELS.get(phase, "STOP")
-	%ActionButton.add_theme_color_override(&"font_color", ACTION_COLORS.get(phase, Color.WHITE))
-	%ActionButton.disabled = (
-		phase == RobotClient.Phase.DISCONNECTED
-		or (phase == RobotClient.Phase.IDLE and RobotClient.selected_opmode.is_empty())
-	)
+	PhaseAction.apply(%ActionButton, RobotClient.phase)
 
 
 func _advance_phase() -> void:

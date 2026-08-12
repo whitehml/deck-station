@@ -1,6 +1,6 @@
 class_name AppThemes
 
-const NAMES := ["Godot", "Mars", "M.A.R.S.", "Botsburgh"]
+const NAMES := ["Godot", "Mars", "M.A.R.S.", "Botsburgh", "Hippo"]
 
 const PANEL_MARGIN := Vector4(8, 6, 8, 6)
 const BUTTON_MARGIN := Vector4(10, 6, 10, 6)
@@ -47,6 +47,7 @@ const BACKGROUND_COLORS := [
 	Color(0.12, 0.22, 0.14, 1),  # Mars: dark green
 	Color(0.22, 0.12, 0.14, 1),  # M.A.R.S.: dark red
 	Color(0.1, 0.11, 0.13, 1),  # Botsburgh: steel black
+	Color(0.79, 0.69, 0.72, 1),  # Hippo: dusty blossom pink
 ]
 
 
@@ -63,6 +64,10 @@ static func for_index(index: int) -> Theme:
 		3:  # Botsburgh: Pittsburgh gold on black
 			return _accent_theme(
 				Color(1.0, 0.714, 0.071), Color(0.035, 0.04, 0.05), Color(0.93, 0.95, 0.97)
+			)
+		4:  # Hippo: navy on muted blossom pink
+			return _accent_theme(
+				Color(0.16, 0.28, 0.62), Color(0.86, 0.76, 0.79), Color(0.08, 0.13, 0.32)
 			)
 		_:
 			return _default_theme()
@@ -262,6 +267,16 @@ static func _box_icon(color: Color, checked: bool) -> ImageTexture:
 	return _icon_texture(img)
 
 
+static func _tinted_icon(source: Texture2D, color: Color) -> ImageTexture:
+	var img: Image = source.get_image().duplicate()
+	img.convert(Image.FORMAT_RGBA8)
+	for y in img.get_height():
+		for x in img.get_width():
+			var alpha := img.get_pixel(x, y).a * color.a
+			img.set_pixel(x, y, Color(color.r, color.g, color.b, alpha))
+	return ImageTexture.create_from_image(img)
+
+
 static func _icon_canvas(color: Color) -> Image:
 	var size := ICON_SIZE * ICON_SUPERSAMPLE
 	var img := Image.create_empty(size, size, false, Image.FORMAT_RGBA8)
@@ -302,10 +317,19 @@ static func _style_inputs(theme: Theme, accent: Color, bg: Color, text: Color, d
 		theme.set_stylebox("grabber", type, grabber.duplicate())
 		theme.set_stylebox("grabber_highlight", type, grabber_hot.duplicate())
 		theme.set_stylebox("grabber_pressed", type, grabber_hot.duplicate())
+	var default := ThemeDB.get_default_theme()
 	for type in ["VSlider", "HSlider"]:
 		theme.set_stylebox("slider", type, track.duplicate())
 		theme.set_stylebox("grabber_area", type, grabber.duplicate())
 		theme.set_stylebox("grabber_area_highlight", type, grabber_hot.duplicate())
+		theme.set_icon("tick", type, _tinted_icon(default.get_icon("tick", type), accent))
+		for name in ["grabber", "grabber_highlight"]:
+			theme.set_icon(name, type, _tinted_icon(default.get_icon(name, type), accent))
+		theme.set_icon(
+			"grabber_disabled", type, _tinted_icon(default.get_icon("grabber_disabled", type), dim)
+		)
+
+	theme.set_constant("modulate_arrow", "OptionButton", 1)
 
 	theme.set_stylebox("background", "ProgressBar", track.duplicate())
 	theme.set_stylebox("fill", "ProgressBar", grabber_hot.duplicate())

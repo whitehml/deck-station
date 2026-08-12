@@ -5,6 +5,10 @@ const NAMES := ["Godot", "Mars", "M.A.R.S.", "Botsburgh"]
 const PANEL_MARGIN := Vector4(8, 6, 8, 6)
 const BUTTON_MARGIN := Vector4(10, 6, 10, 6)
 
+## Embedded windows draw their border over the client rect only, so the frame has
+## to expand outward to reach the title bar strip above it.
+const WINDOW_BORDER_EXPAND := Vector4(8, 32, 8, 6)
+
 const BUTTON_TYPES := ["Button", "MenuButton", "OptionButton", "CheckBox", "CheckButton"]
 
 const ICON_SIZE := 16
@@ -95,6 +99,13 @@ static func _apply_margins(box: StyleBox, margin: Vector4) -> void:
 	box.content_margin_bottom = margin.w
 
 
+static func _apply_expand(box: StyleBoxFlat, margin: Vector4) -> void:
+	box.expand_margin_left = margin.x
+	box.expand_margin_top = margin.y
+	box.expand_margin_right = margin.z
+	box.expand_margin_bottom = margin.w
+
+
 static func _repadded(source: StyleBox, margin: Vector4) -> StyleBox:
 	var box: StyleBox = source.duplicate()
 	_apply_margins(box, margin)
@@ -154,8 +165,13 @@ static func _style_popups(theme: Theme, accent: Color, bg: Color, text: Color, d
 	var surface := _button_box(bg, accent.lerp(bg, 0.5))
 	_apply_margins(surface, PANEL_MARGIN)
 
-	for type in ["PopupMenu", "PopupPanel", "AcceptDialog", "TooltipPanel"]:
+	for type in ["PopupMenu", "PopupPanel", "TooltipPanel"]:
 		theme.set_stylebox("panel", type, surface.duplicate())
+
+	var dialog_panel := surface.duplicate() as StyleBoxFlat
+	dialog_panel.set_border_width_all(0)
+	dialog_panel.set_corner_radius_all(0)
+	theme.set_stylebox("panel", "AcceptDialog", dialog_panel)
 
 	theme.set_stylebox("hover", "PopupMenu", _button_box(bg.lerp(accent, 0.15), accent))
 	theme.set_color("font_color", "PopupMenu", text)
@@ -175,7 +191,8 @@ static func _style_popups(theme: Theme, accent: Color, bg: Color, text: Color, d
 	theme.set_color("font_color", "TooltipLabel", text)
 
 	var border := _button_box(bg, accent)
-	border.content_margin_top = 28
+	border.content_margin_top = WINDOW_BORDER_EXPAND.y
+	_apply_expand(border, WINDOW_BORDER_EXPAND)
 	theme.set_stylebox("embedded_border", "Window", border)
 	var unfocused := border.duplicate()
 	unfocused.border_color = accent.lerp(bg, 0.5)

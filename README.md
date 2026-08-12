@@ -2,7 +2,7 @@
 
 Native replacement for the FTC Driver Station app, targeting primarily the
 Steam Deck, nominally operable in desktop environments.
-See `CONTROLS.md` for the full input map.
+The full input map lives in the app, under **Settings ▸ Controls…**.
 
 > [!WARNING]
 > For development/outreach/practice use only. **NOT COMPETITION LEGAL.** Do
@@ -62,7 +62,7 @@ Still in Desktop Mode:
 4. Add the back-grip bindings below. The grips are not ordinary gamepad buttons,
    so Steam sends them as keyboard keys and the app reads them that way.
 
-| Deck input | Recommended binding | App meaning (CONTROLS.md) |
+| Deck input | Recommended binding | App meaning |
 |---|---|---|
 | L4 / L5 | Key `F1` / `F2` | Left/right pane: tap = step source, hold = radial |
 | R4 | Key `F3` | Tap = STOP · hold = sticks/d-pad drive the UI |

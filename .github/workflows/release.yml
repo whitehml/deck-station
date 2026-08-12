@@ -17,14 +17,21 @@ jobs:
       tag: ${{ steps.v.outputs.tag }}
       prerelease: ${{ steps.v.outputs.prerelease }}
     steps:
+      - uses: actions/checkout@v5
+      # The app version is the VERSION file. A `DS-*` tag names the baseline
+      # Driver Station release this build is compatible with, and moves
+      # independently.
       - id: v
         run: |
+          set -euo pipefail
+          app="$(tr -d '[:space:]' < VERSION)"
+          [ -n "$app" ] || { echo "VERSION is empty" >&2; exit 1; }
           if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
-            echo "version=${GITHUB_REF_NAME#DS-}" >> "$GITHUB_OUTPUT"
+            echo "version=${app}" >> "$GITHUB_OUTPUT"
             echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
             echo "prerelease=false" >> "$GITHUB_OUTPUT"
           else
-            echo "version=main-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+            echo "version=${app}-main-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
             echo "tag=latest" >> "$GITHUB_OUTPUT"
             echo "prerelease=true" >> "$GITHUB_OUTPUT"
           fi
@@ -58,7 +65,8 @@ jobs:
           name: >-
             ${{ needs.version.outputs.prerelease == 'true'
                 && format('Latest main ({0})', needs.version.outputs.version)
-                || needs.version.outputs.tag }}
+                || format('{0} ({1})', needs.version.outputs.version,
+                          needs.version.outputs.tag) }}
           prerelease: ${{ needs.version.outputs.prerelease }}
           # The rolling "latest" release is re-pointed at each main build.
           make_latest: ${{ needs.version.outputs.prerelease == 'true' && 'false' || 'true' }}

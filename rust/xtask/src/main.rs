@@ -138,12 +138,16 @@ fn export() -> Result {
 
     let build = repo_root().join("build");
     fs::create_dir_all(&build)?;
-    run(
+
+    let version = app_version()?;
+    let stamp = VersionStamp::apply(&version)?;
+    let exported = run(
         godot(&["--headless", "--export-release", "Linux"]),
         "godot export",
-    )?;
+    );
+    drop(stamp);
+    exported?;
 
-    let version = project_version()?;
     let version_dir = build.join("versions").join(&version);
     fs::create_dir_all(&version_dir)?;
 
@@ -169,14 +173,48 @@ fn export() -> Result {
     Ok(())
 }
 
-fn project_version() -> Result<String> {
-    let path = repo_root().join("godot/project.godot");
-    let text = fs::read_to_string(&path)?;
-    text.lines()
-        .find_map(|line| line.strip_prefix("config/version="))
-        .map(|v| v.trim().trim_matches('"').to_string())
-        .filter(|v| !v.is_empty())
-        .ok_or_else(|| format!("no config/version in {}", path.display()).into())
+fn app_version() -> Result<String> {
+    let path = repo_root().join("VERSION");
+    let version = fs::read_to_string(&path)?.trim().to_string();
+    if version.is_empty() {
+        return Err(format!("{} is empty", path.display()).into());
+    }
+    Ok(version)
+}
+
+/// The updater reads the version the engine baked in at import time, so an
+/// export has to carry it in `project.godot`. Held for the length of the
+/// export, then the working tree goes back to what it was.
+struct VersionStamp {
+    path: PathBuf,
+    original: String,
+}
+
+impl VersionStamp {
+    fn apply(version: &str) -> Result<Self> {
+        let path = repo_root().join("godot/project.godot");
+        let original = fs::read_to_string(&path)?;
+        let stamped: Vec<String> = original
+            .lines()
+            .map(|line| {
+                if line.starts_with("config/version=") {
+                    format!("config/version=\"{version}\"")
+                } else {
+                    line.to_string()
+                }
+            })
+            .collect();
+        fs::write(&path, stamped.join("\n") + "\n")?;
+        Ok(Self { path, original })
+    }
+}
+
+impl Drop for VersionStamp {
+    fn drop(&mut self) {
+        if let Err(e) = fs::write(&self.path, &self.original) {
+            eprintln!("xtask: restore {}: {e}", self.path.display());
+        }
+    }
 }
 
 fn lint() -> Result {

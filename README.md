@@ -50,9 +50,11 @@ After that first install, update in place from **Settings ▸ Check for
 Updates…** — no re-download, no unpacking. It needs internet access, so leave
 the robot's WiFi first; the app says so if you're still connected.
 
-Releases tagged `DS-<sdk>.<patch>` are the stable ones; the rolling `latest`
-prerelease is rebuilt from `main` on every push, and is what the in-app updater
-currently follows. Windows builds ship alongside as
+Releases tagged `DS-<sdk>.<patch>` are stable. That tag names the
+baseline Driver Station release the build is compatible with. The app's own
+version is the `VERSION` file at the repo root, and that is what appears in the
+bundle names and in **Settings**. The rolling `latest` prerelease is rebuilt
+from `main` on every push, and is what the in-app updater currently follows. Windows builds ship alongside as
 `deck-station-<version>-windows-x86_64.zip`, same layout with
 `deck-station.exe` + `robocol_godot.dll`. `SHA256SUMS` covers every bundle and
 the updater checks the download against it.

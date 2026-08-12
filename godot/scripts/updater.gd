@@ -1,4 +1,4 @@
-extends Node
+extends Control
 
 ## Manual-trigger updater over the install layout the launcher stub reads: the
 ## app lives in `<root>/bin/`, the stub sits at `<root>/`. Applying an update

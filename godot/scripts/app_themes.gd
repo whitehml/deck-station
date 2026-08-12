@@ -11,6 +11,33 @@ const ICON_SIZE := 16
 const ICON_SUPERSAMPLE := 4
 const ICON_STROKE := 1.6
 
+## Custom theme types carrying the app's semantic colors, so widgets that paint
+## themselves resolve them through normal theme propagation instead of holding
+## their own literals.
+const STATUS_TYPE := &"Status"
+const RADIAL_TYPE := &"RadialMenu"
+
+## Signal colors, deliberately shared by every theme so a phase reads the same
+## regardless of palette.
+const STATUS_COLORS := {
+	&"idle": Color(0.55, 0.75, 1.0),
+	&"init": Color(0.4, 0.9, 0.4),
+	&"running": Color(1, 0.3, 0.3),
+	&"neutral": Color.WHITE,
+	&"ok": Color.GREEN_YELLOW,
+	&"warn": Color.ORANGE,
+}
+
+const DEFAULT_RADIAL_COLORS := {
+	&"slice": Color(0.16, 0.19, 0.24, 0.92),
+	&"slice_disabled": Color(0.10, 0.11, 0.13, 0.92),
+	&"slice_highlight": Color(0.20, 0.45, 0.60, 0.95),
+	&"rim": Color(0.6, 0.75, 0.85, 0.5),
+	&"center": Color(0.05, 0.06, 0.08, 0.9),
+	&"label": Color(1, 1, 1),
+	&"cursor": Color(1, 1, 1),
+}
+
 const BACKGROUND_COLORS := [
 	Color(0.2, 0.2, 0.2, 1),  # Godot: default grey
 	Color(0.12, 0.22, 0.14, 1),  # Mars: dark green
@@ -56,6 +83,8 @@ static func _default_theme() -> Theme:
 			theme.set_stylebox(
 				state, type, _repadded(default.get_stylebox(state, type), BUTTON_MARGIN)
 			)
+	_set_colors(theme, STATUS_TYPE, STATUS_COLORS)
+	_set_colors(theme, RADIAL_TYPE, DEFAULT_RADIAL_COLORS)
 	return theme
 
 
@@ -97,7 +126,28 @@ static func _accent_theme(accent: Color, bg: Color, text: Color) -> Theme:
 
 	_style_popups(theme, accent, bg, text, dim)
 	_style_inputs(theme, accent, bg, text, dim)
+	_set_colors(theme, STATUS_TYPE, STATUS_COLORS)
+	_set_colors(theme, RADIAL_TYPE, _radial_colors(accent, bg, text))
 	return theme
+
+
+static func _set_colors(theme: Theme, type: StringName, colors: Dictionary) -> void:
+	for name: StringName in colors:
+		theme.set_color(name, type, colors[name])
+
+
+static func _radial_colors(accent: Color, bg: Color, text: Color) -> Dictionary:
+	var slice := bg.lerp(accent, 0.12)
+	var highlight := bg.lerp(accent, 0.55)
+	return {
+		&"slice": Color(slice.r, slice.g, slice.b, 0.92),
+		&"slice_disabled": Color(bg.r, bg.g, bg.b, 0.92),
+		&"slice_highlight": Color(highlight.r, highlight.g, highlight.b, 0.95),
+		&"rim": Color(accent.r, accent.g, accent.b, 0.5),
+		&"center": Color(bg.r, bg.g, bg.b, 0.9),
+		&"label": text,
+		&"cursor": accent,
+	}
 
 
 static func _style_popups(theme: Theme, accent: Color, bg: Color, text: Color, dim: Color) -> void:

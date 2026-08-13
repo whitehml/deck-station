@@ -1,21 +1,26 @@
 //! Stable launch stub.
 //!
-//! Sits at the fixed install path the desktop/Steam shortcut points at, reads
-//! `installed.json`, and hands off to `versions/<current>/`. The updater only
-//! ever writes new version directories and flips that pointer, so the shortcut
-//! target never moves.
+//! Sits at the fixed install path the desktop/Steam shortcut points at and
+//! execs the app out of `bin/`. The updater only ever writes `bin.new/`; the
+//! swap happens here, at the one moment nothing under `bin/` is open.
 
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-#[cfg(windows)]
-const APP_BINARY: &str = "deck-station.exe";
-#[cfg(not(windows))]
-const APP_BINARY: &str = "deck-station.x86_64";
+#[cfg(target_os = "windows")]
+const APP_CANDIDATES: &[&str] = &["deck-station.exe"];
+#[cfg(target_os = "macos")]
+const APP_CANDIDATES: &[&str] = &[
+    "deck-station.app/Contents/MacOS/deck-station",
+    "deck-station.x86_64",
+];
+#[cfg(not(any(target_os = "windows", target_os = "macos")))]
+const APP_CANDIDATES: &[&str] = &["deck-station.x86_64"];
 
-const POINTER: &str = "installed.json";
-const VERSIONS: &str = "versions";
+const LIVE: &str = "bin";
+const STAGED: &str = "bin.new";
+const RETIRED: &str = "bin.old";
 
 fn main() {
     let root = match std::env::current_exe()
@@ -26,53 +31,73 @@ fn main() {
         None => fail("cannot determine the install directory"),
     };
 
-    let app = match resolve(&root) {
+    reconcile(&root);
+
+    let app = match app_in(&root.join(LIVE)) {
         Some(app) => app,
         None => fail(&format!(
-            "no runnable build found under {}\n\
+            "no runnable build found in {}\n\
              The install looks incomplete — re-download a release bundle.",
-            root.join(VERSIONS).display()
+            root.join(LIVE).display()
         )),
     };
 
     launch(&app, std::env::args_os().skip(1).collect());
 }
 
-fn resolve(root: &Path) -> Option<PathBuf> {
-    let pointer = std::fs::read_to_string(root.join(POINTER)).unwrap_or_default();
+/// Applies a staged update and repairs a swap that was interrupted partway.
+///
+/// The states this has to survive, in the order they occur: `bin` + `bin.new`
+/// (update staged), `bin.old` + `bin.new` (retire done, promote not), `bin` +
+/// `bin.old` (promote done, cleanup not). Any failure leaves a directory the
+/// next run can still resolve into `bin`, so a torn swap never costs the
+/// install. A staged directory with no app in it is left alone rather than
+/// promoted over a working `bin/`.
+fn reconcile(root: &Path) {
+    let live = root.join(LIVE);
+    let staged = root.join(STAGED);
+    let retired = root.join(RETIRED);
 
-    for key in ["current", "previous"] {
-        if let Some(version) = json_string_field(&pointer, key) {
-            if let Some(app) = candidate(root, &version) {
-                return Some(app);
-            }
+    if app_in(&staged).is_some() {
+        let retire = if live.is_dir() {
+            let _ = std::fs::remove_dir_all(&retired);
+            rename(&live, &retired)
+        } else {
+            true
+        };
+        if retire {
+            rename(&staged, &live);
         }
     }
 
-    let mut versions: Vec<OsString> = std::fs::read_dir(root.join(VERSIONS))
-        .ok()?
-        .flatten()
-        .map(|e| e.file_name())
-        .collect();
-    versions.sort();
-    versions
+    if !live.is_dir() && retired.is_dir() {
+        rename(&retired, &live);
+    }
+
+    if live.is_dir() {
+        let _ = std::fs::remove_dir_all(&retired);
+    }
+}
+
+fn rename(from: &Path, to: &Path) -> bool {
+    match std::fs::rename(from, to) {
+        Ok(()) => true,
+        Err(err) => {
+            eprintln!(
+                "deck-station: cannot move {} to {}: {err}",
+                from.display(),
+                to.display()
+            );
+            false
+        }
+    }
+}
+
+fn app_in(dir: &Path) -> Option<PathBuf> {
+    APP_CANDIDATES
         .iter()
-        .rev()
-        .find_map(|name| candidate(root, &name.to_string_lossy()))
-}
-
-fn candidate(root: &Path, version: &str) -> Option<PathBuf> {
-    let app = root.join(VERSIONS).join(version).join(APP_BINARY);
-    app.is_file().then_some(app)
-}
-
-fn json_string_field(src: &str, key: &str) -> Option<String> {
-    let needle = format!("\"{key}\"");
-    let rest = &src[src.find(&needle)? + needle.len()..];
-    let rest = &rest[rest.find(':')? + 1..];
-    let start = rest.find('"')? + 1;
-    let end = rest[start..].find('"')?;
-    Some(rest[start..start + end].to_string())
+        .map(|name| dir.join(name))
+        .find(|app| app.is_file())
 }
 
 #[cfg(unix)]

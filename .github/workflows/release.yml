@@ -75,6 +75,6 @@ jobs:
           body: >-
             Built from ${{ needs.version.outputs.version }}.
             Unpack a bundle into an empty directory and run the `deck-station`
-            launcher at its root; it hands off to the build under `versions/`.
+            launcher at its root; it hands off to the build under `bin/`.
             Once installed, update from **Settings ▸ Check for Updates…** instead
             of downloading again.

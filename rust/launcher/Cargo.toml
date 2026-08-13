@@ -3,6 +3,6 @@ name = "launcher"
 version = "0.1.0"
 edition = "2021"
 publish = false
-description = "Stable launch stub that execs the current versioned app build"
+description = "Stable launch stub that applies staged updates and execs the app"
 
 [dependencies]

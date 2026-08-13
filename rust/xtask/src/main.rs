@@ -35,7 +35,7 @@ fn print_help() {
          dev                 stage (debug) -> godot4 --path godot\n\
          mock                stage (debug) + build fake_rc -> DECK_DS_MOCK=1 godot4\n\
          export              stage (release) + launcher -> Godot export, assembled\n\
-         \x20                   into build/ as stub + versions/<version>/\n\
+         \x20                   into build/ as stub + bin/\n\
          lint                gdformat --check + gdlint over godot/\n\
          clean               remove staged libs from godot/bin/"
     );
@@ -148,14 +148,14 @@ fn export() -> Result {
     drop(stamp);
     exported?;
 
-    let version_dir = build.join("versions").join(&version);
-    fs::create_dir_all(&version_dir)?;
+    let bin = build.join("bin");
+    fs::create_dir_all(&bin)?;
 
     let n = lib_names();
     let app = format!("{}.{}", n.prefix, n.ext);
     for file in [APP_BINARY, app.as_str()] {
-        fs::rename(build.join(file), version_dir.join(file))
-            .map_err(|e| format!("move {file} into {}: {e}", version_dir.display()))?;
+        fs::rename(build.join(file), bin.join(file))
+            .map_err(|e| format!("move {file} into {}: {e}", bin.display()))?;
     }
 
     fs::copy(
@@ -163,10 +163,6 @@ fn export() -> Result {
             .join("rust/target/release")
             .join(LAUNCHER_BINARY),
         build.join(APP_BINARY),
-    )?;
-    fs::write(
-        build.join("installed.json"),
-        format!("{{\"schema\": 1, \"current\": \"{version}\"}}\n"),
     )?;
 
     println!("exported {version} -> {}", build.display());

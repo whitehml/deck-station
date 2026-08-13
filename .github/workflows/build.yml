@@ -106,29 +106,22 @@ jobs:
           godot --headless --path godot --export-release "Linux"
           godot --headless --path godot --export-release "Windows Desktop"
       # Each bundle unpacks to the install layout the launcher expects: the stub
-      # and installed.json at the root, the app + bridge under versions/.
+      # alone at the root, the app + bridge under bin/.
       - name: Package
         env:
           VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
-          mkdir -p dist stage/linux/versions/"$VERSION" stage/windows/versions/"$VERSION"
+          mkdir -p dist stage/linux/bin stage/windows/bin
 
-          cp build/deck-station.x86_64 build/librobocol_godot.so \
-            stage/linux/versions/"$VERSION"/
+          cp build/deck-station.x86_64 build/librobocol_godot.so stage/linux/bin/
           cp native/launcher stage/linux/deck-station.x86_64
-          chmod +x stage/linux/deck-station.x86_64 \
-            stage/linux/versions/"$VERSION"/deck-station.x86_64
+          chmod +x stage/linux/deck-station.x86_64 stage/linux/bin/deck-station.x86_64
 
-          cp build/deck-station.exe build/robocol_godot.dll \
-            stage/windows/versions/"$VERSION"/
+          cp build/deck-station.exe build/robocol_godot.dll stage/windows/bin/
           # The Windows preset enables the console wrapper; ship it if produced.
-          cp build/deck-station.console.exe stage/windows/versions/"$VERSION"/ 2>/dev/null || true
+          cp build/deck-station.console.exe stage/windows/bin/ 2>/dev/null || true
           cp native/launcher.exe stage/windows/deck-station.exe
-
-          for os in linux windows; do
-            printf '{"schema": 1, "current": "%s"}\n' "$VERSION" > stage/$os/installed.json
-          done
 
           tar -czf "dist/deck-station-${VERSION}-linux-x86_64.tar.gz" -C stage/linux .
           (cd stage/windows && zip -qr "../../dist/deck-station-${VERSION}-windows-x86_64.zip" .)

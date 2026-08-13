@@ -1,9 +1,10 @@
 extends Node
 
-## Manual-trigger updater over the versioned install layout the launcher stub
-## reads: `<root>/installed.json` naming a build under `<root>/versions/`.
-## Applying an update only ever adds a version directory and flips that pointer,
-## so the shortcut target never moves and the previous build stays on disk.
+## Manual-trigger updater over the install layout the launcher stub reads: the
+## app lives in `<root>/bin/`, the stub sits at `<root>/`. Applying an update
+## only ever writes `<root>/bin.new/`; the launcher swaps it into place on the
+## next start, when nothing under `bin/` is open. The shortcut target never
+## moves, and every failure path here leaves the live install untouched.
 
 signal answered(accepted: bool)
 
@@ -15,11 +16,11 @@ const HEADERS := [
 	"User-Agent: deck-station-updater",
 ]
 
-const POINTER_FILE := "installed.json"
-const VERSIONS_DIR := "versions"
+const BIN_DIR := "bin"
+const STAGED_DIR := "bin.new"
+const STAGING_DIR := ".staging"
 const SUMS_ASSET := "SHA256SUMS"
 const ASSET_PREFIX := "deck-station-"
-const STAGING_PREFIX := ".staging-"
 const DOWNLOAD_DIR := "user://updates"
 const REQUEST_TIMEOUT := 20.0
 const DEV_VERSION := "dev"
@@ -117,14 +118,24 @@ func current_version() -> String:
 ## --- Install layout ---
 
 
-## The stub launches `<root>/versions/<version>/<app>`, and Godot reports the
-## resolved path, so the root is two levels up from the running binary.
+## The app runs out of `<root>/bin/`, but not always directly inside it — a
+## macOS export nests it in an `.app` bundle — so walk up from the resolved
+## binary to the `bin` directory, and confirm the stub sits beside it.
 func install_root() -> String:
-	var versions := OS.get_executable_path().get_base_dir().get_base_dir()
-	if versions.get_file() != VERSIONS_DIR:
-		return ""
-	var root := versions.get_base_dir()
-	return root if FileAccess.file_exists(root.path_join(POINTER_FILE)) else ""
+	var dir := OS.get_executable_path().get_base_dir()
+	while not dir.is_empty():
+		if dir.get_file() == BIN_DIR:
+			var root := dir.get_base_dir()
+			return root if FileAccess.file_exists(root.path_join(_launcher_name())) else ""
+		var parent := dir.get_base_dir()
+		if parent == dir:
+			break
+		dir = parent
+	return ""
+
+
+func _launcher_name() -> String:
+	return "deck-station.exe" if OS.get_name() == "Windows" else "deck-station.x86_64"
 
 
 func _unavailable_reason() -> String:
@@ -238,11 +249,13 @@ func _apply(release: Dictionary) -> String:
 		return "The download failed its checksum.\n\nNothing was installed."
 
 	_message.dialog_text = "Installing…"
-	return _install(install_root(), str(release["version"]), archive)
+	return _install(install_root(), archive)
 
 
-func _install(root: String, version: String, archive: String) -> String:
-	var staging := root.path_join(VERSIONS_DIR).path_join(STAGING_PREFIX + version)
+## Unpacks beside the live install and leaves the new build staged as
+## `bin.new/`; the launcher promotes it on the next start.
+func _install(root: String, archive: String) -> String:
+	var staging := root.path_join(STAGING_DIR)
 	_remove_tree(staging)
 	DirAccess.make_dir_recursive_absolute(staging)
 
@@ -252,26 +265,18 @@ func _install(root: String, version: String, archive: String) -> String:
 		_remove_tree(staging)
 		return extracted
 
-	# Bundles carry a whole install; only the version directory is transplanted.
-	var payload := staging.path_join(VERSIONS_DIR).path_join(version)
+	# Bundles carry a whole install; only the app directory is transplanted.
+	var payload := staging.path_join(BIN_DIR)
 	if not DirAccess.dir_exists_absolute(payload):
 		_remove_tree(staging)
-		return "The bundle didn't contain a %s build." % version
+		return "The bundle didn't contain a %s directory." % BIN_DIR
 
-	var target := root.path_join(VERSIONS_DIR).path_join(version)
+	var target := root.path_join(STAGED_DIR)
 	_remove_tree(target)
 	var moved := DirAccess.rename_absolute(payload, target)
 	_remove_tree(staging)
 	if moved != OK:
-		return "Couldn't install the new version (error %d)." % moved
-
-	var previous := current_version()
-	var pointed := _write_pointer(root, version, previous)
-	if pointed != OK:
-		_remove_tree(target)
-		return "Couldn't update %s (error %d)." % [POINTER_FILE, pointed]
-
-	_prune(root, [version, previous])
+		return "Couldn't stage the new version (error %d)." % moved
 	return ""
 
 
@@ -332,25 +337,6 @@ func _extract_zip(archive: String, destination: String) -> String:
 
 	zip.close()
 	return ""
-
-
-func _write_pointer(root: String, version: String, previous: String) -> Error:
-	var temp := root.path_join(POINTER_FILE + ".tmp")
-	var file := FileAccess.open(temp, FileAccess.WRITE)
-	if file == null:
-		return FileAccess.get_open_error()
-	file.store_string(
-		JSON.stringify({"schema": 1, "current": version, "previous": previous}) + "\n"
-	)
-	file.close()
-	return DirAccess.rename_absolute(temp, root.path_join(POINTER_FILE))
-
-
-func _prune(root: String, keep: Array) -> void:
-	var versions := root.path_join(VERSIONS_DIR)
-	for entry in DirAccess.get_directories_at(versions):
-		if not keep.has(entry):
-			_remove_tree(versions.path_join(entry))
 
 
 func _remove_tree(path: String) -> void:

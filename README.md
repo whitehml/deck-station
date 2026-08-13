@@ -20,22 +20,22 @@ WiFi using the `robocol` protocol.
 ## Steam Deck
 
 The Deck runs Linux x86_64. A bundle unpacks to a small tree: the
-`deck-station.x86_64` launcher and `installed.json` at the root, over the build
-itself — the Godot executable plus `librobocol_godot.so`, the native robocol
-bridge Godot loads at runtime — under `versions/<version>/`.
+`deck-station.x86_64` launcher alone at the root, over the build itself — the
+Godot executable plus `librobocol_godot.so`, the native robocol bridge Godot
+loads at runtime — under `bin/`.
 
 ```
 ~/deck/
     deck-station.x86_64              <- run/shortcut this; it never moves
-    installed.json
-    versions/<version>/
+    bin/
         deck-station.x86_64
         librobocol_godot.so
 ```
 
-The launcher hands off to whichever build `installed.json` names, so updates
-drop in a new `versions/` directory without disturbing your Steam shortcut or
-its controller layout. Get it one of two ways:
+The launcher always hands off to `bin/`, so updates land without disturbing your
+Steam shortcut or its controller layout: the updater unpacks a new build to
+`bin.new/` and the launcher swaps it in on the next start, when nothing in
+`bin/` is running. Get it one of two ways:
 
 ### Download a release
 

@@ -216,13 +216,33 @@ func _fetch_url(url: String) -> Dictionary:
 
 func _response(result: Array) -> Dictionary:
 	if result[0] != HTTPRequest.RESULT_SUCCESS:
-		return {
-			"error":
-			"Couldn't reach GitHub.\n\n" + "Check that you're on a network with internet access."
-		}
+		return {"error": "Couldn't reach GitHub.\n\n%s" % _failure_reason(result[0])}
 	if result[1] != 200:
 		return {"error": "GitHub answered with HTTP %d." % result[1]}
 	return {"body": result[3]}
+
+
+func _failure_reason(code: int) -> String:
+	var detail := ""
+	match code:
+		HTTPRequest.RESULT_CANT_RESOLVE:
+			detail = "The address couldn't be resolved. Check DNS."
+		HTTPRequest.RESULT_CANT_CONNECT, HTTPRequest.RESULT_CONNECTION_ERROR:
+			detail = "The connection failed. Check that you're on a network with internet access."
+		HTTPRequest.RESULT_TLS_HANDSHAKE_ERROR:
+			detail = (
+				"The TLS handshake failed. Something is intercepting HTTPS, "
+				+ "or the system clock is wrong."
+			)
+		HTTPRequest.RESULT_TIMEOUT:
+			detail = "The request timed out after %d seconds." % int(REQUEST_TIMEOUT)
+		HTTPRequest.RESULT_REDIRECT_LIMIT_REACHED:
+			detail = "Too many redirects."
+		HTTPRequest.RESULT_DOWNLOAD_FILE_CANT_OPEN, HTTPRequest.RESULT_DOWNLOAD_FILE_WRITE_ERROR:
+			detail = "The download couldn't be written to disk."
+		_:
+			detail = "Check that you're on a network with internet access."
+	return "%s\n\n(HTTPRequest result %d)" % [detail, code]
 
 
 ## --- Download and apply ---

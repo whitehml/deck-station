@@ -124,7 +124,8 @@ jobs:
           cp native/launcher.exe stage/windows/deck-station.exe
 
           tar -czf "dist/deck-station-${VERSION}-linux-x86_64.tar.gz" -C stage/linux .
-          (cd stage/windows && zip -qr "../../dist/deck-station-${VERSION}-windows-x86_64.zip" .)
+          (cd stage/windows \
+            && zip -qr "../../dist/deck-station-${VERSION}-windows-x86_64-unsigned.zip" .)
           ls -l dist
       - uses: actions/upload-artifact@v4
         with:
@@ -240,7 +241,7 @@ jobs:
           ditto build/deck-station.app stage/deck-station.app
           ln -s /Applications stage/Applications
           hdiutil create -volname "Deck Station" -srcfolder stage -ov -format UDZO \
-            "dist/deck-station-${VERSION}-macos-universal.dmg"
+            "dist/deck-station-${VERSION}-macos-universal-unnotarized.dmg"
           ls -l dist
       - uses: actions/upload-artifact@v4
         with:

@@ -2,7 +2,7 @@
 
 Native replacement for the FTC Driver Station app, targeting primarily the
 Steam Deck, nominally operable in desktop environments.
-The full input map lives in the app, under **Settings ▸ Controls…**.
+The full input map lives in the app, under **Settings ▸ Controls**.
 
 > [!WARNING]
 > For development/outreach/practice use only. **NOT COMPETITION LEGAL.** Do

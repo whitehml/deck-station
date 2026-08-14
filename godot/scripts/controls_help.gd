@@ -1,6 +1,6 @@
 extends AcceptDialog
 
-## Read-only controls reference, opened from Settings -> Controls…. Two pages:
+## Read-only controls reference, opened from Settings -> Controls. Two pages:
 ## the driver-station bindings, and a keyboard map of the gamepad emulation.
 
 enum { ANY, DECK, DESKTOP }

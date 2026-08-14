@@ -54,11 +54,11 @@ Releases tagged `DS-<sdk>.<patch>` are stable. That tag names the
 baseline Driver Station release the build is compatible with. The app's own
 version is the `VERSION` file at the repo root, and that is what appears in the
 bundle names and in **Settings**. The rolling `latest` prerelease is rebuilt
-from `main` on every push, and is what the in-app updater currently follows. Windows builds ship alongside as
-`deck-station-<version>-windows-x86_64.zip`, same layout with
-`deck-station.exe` + `robocol_godot.dll`, and macOS as a `.dmg`
-([details](#macos)). `SHA256SUMS` covers every bundle and the updater checks the
-download against it.
+from `main` on every push, and is what the in-app updater currently follows.
+Windows builds ship alongside as `deck-station-<version>-windows-x86_64.zip`,
+same layout with `deck-station.exe` + `robocol_godot.dll`, and macOS as a `.dmg`
+([details](#macos)). `SHA256SUMS` covers every bundle, and on Linux and Windows
+the updater checks the download against it.
 
 <p align="center"><strong>— OR —</strong></p>
 
@@ -110,19 +110,16 @@ or on Linux unpack the release tarball and run `./deck-station.x86_64` directly.
 
 Releases carry `deck-station-<version>-macos-universal.dmg`, a Universal 2 build
 covering both Apple Silicon and Intel. Open it and drag `deck-station` to
-Applications — no launcher stub, no `bin/`, and so no in-app updater either:
-**Check for Updates…** reports the install as unmanaged and points back at the
-Releases page. Install a newer `.dmg` over the old one.
+Applications. There is no launcher stub and no `bin/`, and so no in-app updater
+either: **Check for Updates** reports the install as unmanaged and points back
+at the Releases page. To update, download a newer `.dmg` and drag it over the
+installed app.
 
 The build is ad-hoc signed, not notarized (there is no Apple Developer ID behind
-this project), so Gatekeeper quarantines it on download. The first launch has to
-be **right-click ▸ Open ▸ Open**; plain double-clicking reports that the app
-cannot be opened. Later launches are normal. To clear the quarantine flag
-outright instead:
-
-```sh
-xattr -dr com.apple.quarantine /Applications/deck-station.app
-```
+this project), so Gatekeeper blocks it on first launch. Getting past that means
+deliberately granting this app an exception to macOS's protections. How you do
+that differs by macOS version, so running this build assumes you know how to
+make that exception on your own machine, and are willing to.
 
 Without Steam Input there are no back grips — their four actions map to plain
 keyboard keys (L4 → `F1`, L5 → `F2`, R4 → `F3`, R5 → `F4`), and the cursor is

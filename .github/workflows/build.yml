@@ -1,10 +1,9 @@
 name: build
 
 # Reusable: builds the bridge and the launcher stub on each host OS, then runs
-# both Godot exports on Linux (Godot cross-exports Windows; no wine/rcedit
-# needed since the preset has modify_resources=false and codesign off). macOS
-# builds and exports on its own runner, because a .dmg can only be made on
-# macOS. "package" merges the two legs and emits the "dist" artifact.
+# both Windows/Linux Godot exports on Linux. macOS builds and exports
+# on its own runner, because a .dmg can only be made on macOS. "package" merges
+# the two legs and emits the "dist" artifact.
 on:
   workflow_call:
     inputs:
@@ -133,11 +132,10 @@ jobs:
           path: dist/
           if-no-files-found: error
 
-  # macOS ships the plain .app in a .dmg, not the launcher + bin/ layout: the
-  # stub exists to keep a Steam shortcut pointed at a path that never moves,
-  # which has no equivalent here, and a bare Unix executable is not something
-  # Finder can sensibly open. The in-app updater is therefore inert on macOS —
-  # it reports the install as unmanaged and points at the releases page.
+  # macOS ships the plain .app in a .dmg, not the launcher + bin/ layout: a
+  # signed .app cannot update in place without breaking its own bundle seal.
+  # The in-app updater therefore cannot function on macOS; it instead reports
+  # the install as unmanaged and points at the releases page.
   macos:
     runs-on: macos-latest
     steps:
@@ -207,9 +205,8 @@ jobs:
       # Embedding the pck invalidates whatever signature the template carried,
       # and Apple Silicon refuses to load unsigned code at all. Ad-hoc is the
       # strongest signature available without a Developer ID; it does not clear
-      # Gatekeeper's quarantine on a downloaded copy, hence the note in the
-      # release body. The bridge dylib is signed on its own first; the bundle
-      # seal then covers it.
+      # Gatekeeper's quarantine on a downloaded copy. The bridge dylib is signed
+      # on its own first; the bundle seal then covers it.
       - name: Ad-hoc sign
         run: |
           set -euo pipefail
@@ -217,9 +214,6 @@ jobs:
           find "$app" -name '*.dylib' -exec codesign --force --sign - {} +
           codesign --force --deep --sign - "$app"
           codesign --verify --deep --strict --verbose=2 "$app"
-      # Catches the failure this job exists to avoid: an export that dropped the
-      # bridge, or one that shipped a single-architecture copy of it. The app
-      # would still launch on the runner's own arch, so nothing else notices.
       - name: Verify bundle
         run: |
           set -euo pipefail
@@ -254,8 +248,8 @@ jobs:
           path: dist/
           if-no-files-found: error
 
-  # One SHA256SUMS across every bundle, written after both legs land — the
-  # updater looks its own download up in this file.
+  # One SHA256SUMS across every bundle; the updater looks its own download up in
+  # this file.
   package:
     needs: [export, macos]
     runs-on: ubuntu-latest

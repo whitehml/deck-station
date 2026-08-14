@@ -75,15 +75,15 @@ jobs:
           body: |
             Built from ${{ needs.version.outputs.version }}.
 
-            **Linux / Windows** — unpack a bundle into an empty directory and run
+            **Linux / Windows**: unpack a bundle into an empty directory and run
             the `deck-station` launcher at its root; it hands off to the build
             under `bin/`. Once installed, update from
             **Settings ▸ Check for Updates…** instead of downloading again.
 
-            **macOS** — open the `.dmg` and drag `deck-station` to Applications.
-            The build is ad-hoc signed rather than notarized, so the first launch
-            has to be **right-click ▸ Open ▸ Open**; double-clicking it shows a
-            "cannot be opened" warning instead. macOS has no in-app updater —
-            download a newer `.dmg` from this page.
+            **macOS**: open the `.dmg` and drag `deck-station` to Applications.
+            The build is ad-hoc signed rather than notarized, so Gatekeeper
+            blocks the first launch. Expect to grant that exception yourself, by
+            whatever route your macOS version provides. The macOS build cannot
+            update in-app, so download a newer `.dmg` from this page.
 
             `SHA256SUMS` covers every file above.

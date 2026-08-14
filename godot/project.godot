@@ -88,3 +88,10 @@ page_next={
 , Object(InputEventJoypadMotion,"resource_local_to_scene":false,"resource_name":"","device":-1,"axis":5,"axis_value":1.0,"script":null)
 ]
 }
+
+[rendering]
+
+; Apple Silicon GPUs cannot sample S3TC/BPTC, so Godot refuses a universal or
+; arm64 macOS export unless the ETC2/ASTC import path is on. The project has no
+; image assets, so nothing is actually imported twice.
+textures/vram_compression/import_etc2_astc=true

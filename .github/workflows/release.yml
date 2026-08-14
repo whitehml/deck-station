@@ -50,6 +50,15 @@ jobs:
         with:
           name: dist
           path: dist
+      - name: Sign SHA256SUMS
+        env:
+          SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
+        run: |
+          set -euo pipefail
+          [ -n "$SIGNING_KEY" ] || { echo "RELEASE_SIGNING_KEY is not set" >&2; exit 1; }
+          printf '%s' "$SIGNING_KEY" > key.pem
+          openssl dgst -sha256 -sign key.pem -out dist/SHA256SUMS.sig dist/SHA256SUMS
+          rm -f key.pem
       - name: Reset the rolling release
         if: needs.version.outputs.prerelease == 'true'
         env:

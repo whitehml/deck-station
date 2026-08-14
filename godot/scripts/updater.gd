@@ -20,6 +20,8 @@ const BIN_DIR := "bin"
 const STAGED_DIR := "bin.new"
 const STAGING_DIR := ".staging"
 const SUMS_ASSET := "SHA256SUMS"
+const SIG_ASSET := "SHA256SUMS.sig"
+const PUBLIC_KEY := "res://assets/keys/public.pub"
 const ASSET_PREFIX := "deck-station-"
 const DOWNLOAD_DIR := "user://updates"
 const REQUEST_TIMEOUT := 20.0
@@ -193,17 +195,26 @@ func _fetch_latest() -> Dictionary:
 		var url := str(asset.get("browser_download_url", ""))
 		if asset_name == SUMS_ASSET:
 			found["sums_url"] = url
+		elif asset_name == SIG_ASSET:
+			found["sig_url"] = url
 		elif asset_name.ends_with(suffix):
 			found["name"] = asset_name
 			found["url"] = url
 			found["size"] = int(asset.get("size", 0))
 			found["version"] = asset_name.trim_prefix(ASSET_PREFIX).trim_suffix(suffix)
 
+	var missing := _missing_asset(found)
+	return {"error": missing} if not missing.is_empty() else found
+
+
+func _missing_asset(found: Dictionary) -> String:
 	if not found.has("url"):
-		return {"error": "The latest release has no bundle for %s." % OS.get_name()}
+		return "The latest release has no bundle for %s." % OS.get_name()
 	if not found.has("sums_url"):
-		return {"error": "The latest release is missing %s." % SUMS_ASSET}
-	return found
+		return "The latest release is missing %s." % SUMS_ASSET
+	if not found.has("sig_url"):
+		return "The latest release is missing %s." % SIG_ASSET
+	return ""
 
 
 func _fetch_url(url: String) -> Dictionary:
@@ -251,12 +262,10 @@ func _failure_reason(code: int) -> String:
 ## Returns an empty string on success, otherwise a message for the user. Every
 ## failure path leaves the existing install untouched.
 func _apply(release: Dictionary) -> String:
-	var sums := await _fetch_url(str(release["sums_url"]))
-	if sums.has("error"):
-		return sums["error"]
-	var expected := _expected_hash(sums["body"].get_string_from_utf8(), str(release["name"]))
-	if expected.is_empty():
-		return "%s has no entry for this bundle." % SUMS_ASSET
+	var verified := await _trusted_hash(release)
+	if verified.has("error"):
+		return verified["error"]
+	var expected: String = verified["hash"]
 
 	DirAccess.make_dir_recursive_absolute(DOWNLOAD_DIR)
 	var archive := ProjectSettings.globalize_path(DOWNLOAD_DIR.path_join(str(release["name"])))
@@ -314,6 +323,38 @@ func _download(url: String, destination: String) -> String:
 
 	var response := _response(result)
 	return response.get("error", "")
+
+
+func _trusted_hash(release: Dictionary) -> Dictionary:
+	var sums := await _fetch_url(str(release["sums_url"]))
+	if sums.has("error"):
+		return sums
+	var signature := await _fetch_url(str(release["sig_url"]))
+	if signature.has("error"):
+		return signature
+	if not _signed(sums["body"], signature["body"]):
+		return {
+			"error":
+			(
+				"%s failed its signature check.\n\nNothing was downloaded.\n\n" % SUMS_ASSET
+				+ "Download a release bundle by hand from\n%s" % [RELEASES_PAGE % REPO]
+			)
+		}
+
+	var expected := _expected_hash(sums["body"].get_string_from_utf8(), str(release["name"]))
+	if expected.is_empty():
+		return {"error": "%s has no entry for this bundle." % SUMS_ASSET}
+	return {"hash": expected}
+
+
+func _signed(sums: PackedByteArray, signature: PackedByteArray) -> bool:
+	var key := CryptoKey.new()
+	if key.load(PUBLIC_KEY, true) != OK:
+		return false
+	var ctx := HashingContext.new()
+	ctx.start(HashingContext.HASH_SHA256)
+	ctx.update(sums)
+	return Crypto.new().verify(HashingContext.HASH_SHA256, ctx.finish(), signature, key)
 
 
 func _expected_hash(sums: String, asset_name: String) -> String:

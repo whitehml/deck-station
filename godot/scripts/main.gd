@@ -160,8 +160,8 @@ func _setup_settings_menu() -> void:
 	popup.add_submenu_item("Themes", "ThemesMenu")
 
 	popup.add_separator()
-	popup.add_item("Controls…", CONTROLS_ID)
-	popup.add_item("Check for Updates…", UPDATE_ID)
+	popup.add_item("Controls", CONTROLS_ID)
+	popup.add_item("Check for Updates", UPDATE_ID)
 	popup.add_item("Quit", QUIT_ID)
 	popup.id_pressed.connect(_on_settings_id)
 

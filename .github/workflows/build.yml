@@ -147,7 +147,10 @@ jobs:
       - name: Install pinned Rust (from rust-toolchain.toml)
         working-directory: rust
         run: rustup show
+      # In rust/, so these land on the toolchain rust-toolchain.toml pins rather
+      # than on the runner's default one, which is not what cargo builds with.
       - name: Add both macOS targets
+        working-directory: rust
         run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
       - uses: Swatinem/rust-cache@v2
         with:

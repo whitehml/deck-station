@@ -5,7 +5,7 @@ Steam Deck, nominally operable in desktop environments.
 See `CONTROLS.md` for the full input map.
 
 > [!WARNING]
-> **For development/outreach/practice use only — NOT COMPETITION LEGAL.** Do
+> For development/outreach/practice use only. **NOT COMPETITION LEGAL.** Do
 > not attempt to use this driver station in official FTC competition.
 
 This is the app you run on the Steam Deck to drive the robot: the on-screen
@@ -19,74 +19,48 @@ WiFi using the `robocol` protocol.
 
 ## Steam Deck
 
-The Deck runs Linux x86_64. A bundle unpacks to a small tree: the
-`deck-station.x86_64` launcher alone at the root, over the build itself — the
-Godot executable plus `librobocol_godot.so`, the native robocol bridge Godot
-loads at runtime — under `bin/`.
+The Deck runs Linux, so the Linux download is the one you want. There are three
+steps: put the files on the Deck, add it to Steam, then connect to the robot.
 
-```
-~/deck/
-    deck-station.x86_64              <- run/shortcut this; it never moves
-    bin/
-        deck-station.x86_64
-        librobocol_godot.so
-```
+### Step 1: Put the files on the Deck
 
-The launcher always hands off to `bin/`, so updates land without disturbing your
-Steam shortcut or its controller layout: the updater unpacks a new build to
-`bin.new/` and the launcher swaps it in on the next start, when nothing in
-`bin/` is running. Get it one of two ways:
-
-### Download a release
-
-Grab `deck-station-<version>-linux-x86_64.tar.gz` from the GitHub **Releases**
-page and unpack it into an empty directory on the deck/target environment.
+Switch the Deck to Desktop Mode and open this page in a browser on the Deck
+itself. From the GitHub **Releases** page, download
+`deck-station-<version>-linux-x86_64.tar.gz`. Then open a
+[terminal](https://pimylifeup.com/steam-deck-open-terminal/) and unpack it into
+a new, empty folder:
 
 ```sh
 mkdir -p ~/deck && tar -xzf deck-station-*-linux-x86_64.tar.gz -C ~/deck
 ```
 
-After that first install, update in place from **Settings ▸ Check for
-Updates…** — no re-download, no unpacking. It needs internet access, so leave
-the robot's WiFi first; the app says so if you're still connected.
+You get one file to run, plus a folder holding everything else:
 
-Releases tagged `DS-<sdk>.<patch>` are stable. That tag names the
-baseline Driver Station release the build is compatible with. The app's own
-version is the `VERSION` file at the repo root, and that is what appears in the
-bundle names and in **Settings**. The rolling `latest` prerelease is rebuilt
-from `main` on every push, and is what the in-app updater currently follows.
-Windows builds ship alongside as `deck-station-<version>-windows-x86_64.zip`,
-same layout with `deck-station.exe` + `robocol_godot.dll`, and macOS as a `.dmg`
-([details](#macos)). `SHA256SUMS` covers every bundle, and on Linux and Windows
-the updater checks the download against it.
-
-<p align="center"><strong>— OR —</strong></p>
-
-### Build from source
-
-Install the toolchain first:
-
-- Rust — via [rustup](https://rustup.rs). The bridge pins 1.97.0 via
-  `rust/rust-toolchain.toml`, so rustup installs it automatically on first build.
-  Linux/WSL2 also needs a C toolchain: `sudo apt install build-essential`.
-- Godot 4.4.1 (standard, non-.NET) from godotengine.org, on `PATH` as `godot4`,
-  plus the matching export templates (Editor -> Manage Export Templates ->
-  Download and Install).
-
-Then `cargo xtask export` stages the release `.so` and runs the Godot "Linux"
-export into `build/`; copy that to the Deck:
-
-```sh
-cd rust && cargo xtask export
-rsync -a build/ deck@steamdeck:~/deck/
+```
+~/deck/
+    deck-station.x86_64              <- this is the one you run
+    bin/
+        deck-station.x86_64
+        librobocol_godot.so
 ```
 
-### Set it up in Steam
+The file at the top is a small launcher. All it does is start the real app
+inside `bin/`. Keeping the two separate is what lets the app update itself later
+without breaking your Steam shortcut: an update is written into a new `bin.new/`
+folder, and the launcher swaps it into place the next time you start the app. So
+point your shortcut at the file at the top, and leave `bin/` alone.
 
-**Add it to Steam.** In Desktop Mode: **Steam ▸ Games ▸ Add a Non-Steam Game**,
-browse to `~/deck/deck-station.x86_64`. Under **Controller ▸ Edit Layout**,
-start from the **Gamepad** template (xinput passthrough) and add the recommended
-back-grip bindings:
+### Step 2: Add it to Steam
+
+Still in Desktop Mode:
+
+1. Go to **Steam ▸ Games ▸ Add a Non-Steam Game**.
+2. Browse to `~/deck/deck-station.x86_64`. Pick the one at the top, not the copy
+   inside `bin/`.
+3. Select the new entry, open **Controller ▸ Edit Layout**, and start from the
+   **Gamepad** template, which passes the sticks and buttons straight through.
+4. Add the back-grip bindings below. The grips are not ordinary gamepad buttons,
+   so Steam sends them as keyboard keys and the app reads them that way.
 
 | Deck input | Recommended binding | App meaning (CONTROLS.md) |
 |---|---|---|
@@ -95,16 +69,26 @@ back-grip bindings:
 | R5 | Key `F4` | Tap = click at cursor · hold = slot-swap radial |
 | Trackpads | Mouse / left click | Cursor + click (R5 is primary) |
 
-Return to Gaming Mode and launch from **Library ▸ Play**.
+### Step 3: Connect to the robot
 
-Join the Control Hub's WiFi and launch the app, it should auto-connect to the
-Control Hub.
+Return to Gaming Mode and launch it from **Library ▸ Play**. Join the Control
+Hub's WiFi from the Deck, and the app connects to the robot on its own.
 
-## Desktop Environment (Any OS)
+### Updating later
 
-The app also runs on a plain Linux, Windows, or macOS desktop. Build and launch
-from source (see [Development](#development)) with `cd rust && cargo xtask dev`,
-or on Linux unpack the release tarball and run `./deck-station.x86_64` directly.
+Open **Settings ▸ Check for Updates** in the app. It downloads and installs the
+new version for you, and the change takes effect the next time you start the
+app. There is nothing to download or unpack by hand.
+
+Updating needs internet access, so leave the robot's WiFi and join a normal
+network first. The app tells you if you are still connected to the robot.
+
+## Other computers (Windows, Linux, macOS)
+
+The app also runs on an ordinary desktop, no Deck required. On Linux, unpack the
+release tarball and run `./deck-station.x86_64`. On Windows, unpack the zip and
+run `deck-station.exe`. On macOS, see below. To run it from source on any of the
+three, see [Development](#development) and use `cd rust && cargo xtask dev`.
 
 ### macOS
 
@@ -121,29 +105,46 @@ deliberately granting this app an exception to macOS's protections. How you do
 that differs by macOS version, so running this build assumes you know how to
 make that exception on your own machine, and are willing to.
 
-Without Steam Input there are no back grips — their four actions map to plain
-keyboard keys (L4 → `F1`, L5 → `F2`, R4 → `F3`, R5 → `F4`), and the cursor is
-just your mouse. Plug in any xinput pad for robot control.
-
 ---
 
 # Development
 
+## Build from source
+
+Install the toolchain first:
+
+- Rust, via [rustup](https://rustup.rs). The bridge pins 1.97.0 via
+  `rust/rust-toolchain.toml`, so rustup installs it automatically on the first
+  build. Linux/WSL2 also needs a C toolchain:
+  `sudo apt install build-essential`.
+- Godot 4.4.1 (standard, non-.NET) from godotengine.org, on `PATH` as `godot4`,
+  plus the matching export templates (Editor -> Manage Export Templates ->
+  Download and Install).
+
 `cargo xtask` builds the bridge for the host OS (`.so`/`.dll`/`.dylib`), stages
-it under the name Godot expects, and drives Godot — so the full app (UI, mock,
-and real robot) runs from source on Linux, Windows, and macOS. Run from `rust/`:
+it under the name Godot expects, and drives Godot. The full app (UI, mock, and
+real robot) runs from source on Linux, Windows, and macOS. Run it from `rust/`:
 
 ```sh
 cargo xtask dev      # build + stage bridge, connect to a real RC
 cargo xtask mock     # same, but build fake_rc and connect to it on loopback
 ```
 
-Pass switches as environment variables before the command, e.g.
+To produce a release build, and optionally copy it to the Deck:
+
+```sh
+cd rust && cargo xtask export
+rsync -a build/ deck@steamdeck:~/deck/
+```
+
+## Running
+
+Pass switches as environment variables before the `cargo xtask` command, e.g.
 `DECK_DS_PEER=192.168.43.1 cargo xtask dev`. On the Deck, the same variables go
 in the Steam entry's launch options (**Properties ▸ Shortcut**, before
-`%command%` — e.g. `DECK_DS_MOCK=1 %command%`). `DECK_DS_MOCK=1` spawns `fake_rc`
+`%command%`, e.g. `DECK_DS_MOCK=1 %command%`). `DECK_DS_MOCK=1` spawns `fake_rc`
 on loopback and points the bridge at it, so mock exercises the same path as a
-real robot:
+real robot.
 
 | variable | effect |
 |---|---|

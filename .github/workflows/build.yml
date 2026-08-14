@@ -2,8 +2,9 @@ name: build
 
 # Reusable: builds the bridge and the launcher stub on each host OS, then runs
 # both Godot exports on Linux (Godot cross-exports Windows; no wine/rcedit
-# needed since the preset has modify_resources=false and codesign off). Emits a
-# "dist" artifact.
+# needed since the preset has modify_resources=false and codesign off). macOS
+# builds and exports on its own runner, because a .dmg can only be made on
+# macOS. "package" merges the two legs and emits the "dist" artifact.
 on:
   workflow_call:
     inputs:
@@ -125,9 +126,147 @@ jobs:
 
           tar -czf "dist/deck-station-${VERSION}-linux-x86_64.tar.gz" -C stage/linux .
           (cd stage/windows && zip -qr "../../dist/deck-station-${VERSION}-windows-x86_64.zip" .)
-
-          (cd dist && sha256sum ./* > SHA256SUMS)
           ls -l dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-desktop
+          path: dist/
+          if-no-files-found: error
+
+  # macOS ships the plain .app in a .dmg, not the launcher + bin/ layout: the
+  # stub exists to keep a Steam shortcut pointed at a path that never moves,
+  # which has no equivalent here, and a bare Unix executable is not something
+  # Finder can sensibly open. The in-app updater is therefore inert on macOS —
+  # it reports the install as unmanaged and points at the releases page.
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - name: Install pinned Rust (from rust-toolchain.toml)
+        working-directory: rust
+        run: rustup show
+      - name: Add both macOS targets
+        run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+          key: macos
+      # Godot's macOS template is a Universal 2 binary, so the bridge has to
+      # carry both slices or the app dies on load for whichever Mac it misses.
+      # Two targets means going around `xtask stage`, which builds host-only.
+      - name: Build + stage bridge (universal release)
+        working-directory: rust
+        run: |
+          set -euo pipefail
+          for target in aarch64-apple-darwin x86_64-apple-darwin; do
+            cargo build -p robocol_godot --release --target "$target"
+          done
+          lipo -create -output ../godot/bin/librobocol_godot.dylib \
+            target/aarch64-apple-darwin/release/librobocol_godot.dylib \
+            target/x86_64-apple-darwin/release/librobocol_godot.dylib
+      # As on Linux: baked in before the import so Settings reports it. The
+      # Info.plist fields take the bare VERSION instead, since Apple only
+      # accepts dotted numbers there.
+      - name: Stamp version
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          bundle="$(tr -d '[:space:]' < VERSION)"
+          sed -i '' "s|^config/version=.*|config/version=\"${VERSION}\"|" godot/project.godot
+          sed -i '' \
+            -e "s|^application/short_version=.*|application/short_version=\"${bundle}\"|" \
+            -e "s|^application/version=.*|application/version=\"${bundle}\"|" \
+            godot/export_presets.cfg
+      - name: Set up Godot
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: ${{ env.GODOT_VERSION }}
+          use-dotnet: false
+      - name: Install export templates
+        run: |
+          set -euo pipefail
+          tpz="Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          dest="$HOME/Library/Application Support/Godot/export_templates/${GODOT_VERSION}.stable"
+          curl -fsSL -o "$tpz" \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/${tpz}"
+          unzip -q "$tpz" -d /tmp/godot-templates
+          mkdir -p "$dest"
+          mv /tmp/godot-templates/templates/* "$dest/"
+      - name: Import project
+        run: godot --headless --path godot --import
+      - name: Export
+        run: |
+          mkdir -p build
+          godot --headless --path godot --export-release "macOS"
+      # Embedding the pck invalidates whatever signature the template carried,
+      # and Apple Silicon refuses to load unsigned code at all. Ad-hoc is the
+      # strongest signature available without a Developer ID; it does not clear
+      # Gatekeeper's quarantine on a downloaded copy, hence the note in the
+      # release body. The bridge dylib is signed on its own first; the bundle
+      # seal then covers it.
+      - name: Ad-hoc sign
+        run: |
+          set -euo pipefail
+          app=build/deck-station.app
+          find "$app" -name '*.dylib' -exec codesign --force --sign - {} +
+          codesign --force --deep --sign - "$app"
+          codesign --verify --deep --strict --verbose=2 "$app"
+      # Catches the failure this job exists to avoid: an export that dropped the
+      # bridge, or one that shipped a single-architecture copy of it. The app
+      # would still launch on the runner's own arch, so nothing else notices.
+      - name: Verify bundle
+        run: |
+          set -euo pipefail
+          app=build/deck-station.app
+          exe="$(find "$app/Contents/MacOS" -type f -perm +111 -print -quit)"
+          bridge="$(find "$app" -name librobocol_godot.dylib -print -quit)"
+          [ -n "$exe" ] || { echo "no executable in $app/Contents/MacOS" >&2; exit 1; }
+          [ -n "$bridge" ] || { echo "no librobocol_godot.dylib in the bundle" >&2; exit 1; }
+          for binary in "$exe" "$bridge"; do
+            archs="$(lipo -info "$binary")"
+            echo "$archs"
+            case "$archs" in
+              *x86_64*arm64* | *arm64*x86_64*) ;;
+              *) echo "$binary is not universal" >&2; exit 1 ;;
+            esac
+          done
+      - name: Package
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist stage
+          # ditto, not cp: it is the copy that keeps a bundle's signature intact.
+          ditto build/deck-station.app stage/deck-station.app
+          ln -s /Applications stage/Applications
+          hdiutil create -volname "Deck Station" -srcfolder stage -ov -format UDZO \
+            "dist/deck-station-${VERSION}-macos-universal.dmg"
+          ls -l dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-macos
+          path: dist/
+          if-no-files-found: error
+
+  # One SHA256SUMS across every bundle, written after both legs land — the
+  # updater looks its own download up in this file.
+  package:
+    needs: [export, macos]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: dist-*
+          merge-multiple: true
+      - name: Checksum
+        run: |
+          set -euo pipefail
+          (cd dist && sha256sum ./* > SHA256SUMS)
+          cat dist/SHA256SUMS
       - uses: actions/upload-artifact@v4
         with:
           name: dist

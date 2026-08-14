@@ -165,7 +165,7 @@ func _writable(root: String) -> bool:
 func _asset_suffix() -> String:
 	match OS.get_name():
 		"Windows":
-			return "-windows-x86_64.zip"
+			return "-windows-x86_64-unsigned.zip"
 		"Linux":
 			return "-linux-x86_64.tar.gz"
 	return ""

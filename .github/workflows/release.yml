@@ -78,7 +78,10 @@ jobs:
             **Linux / Windows**: unpack a bundle into an empty directory and run
             the `deck-station` launcher at its root; it hands off to the build
             under `bin/`. Once installed, update from
-            **Settings ▸ Check for Updates…** instead of downloading again.
+            **Settings ▸ Check for Updates** instead of downloading again.
+
+            **Windows**: the build is unsigned, so extra steps may be required
+            to let Windows run it the first time.
 
             **macOS**: open the `.dmg` and drag `deck-station` to Applications.
             The build is ad-hoc signed rather than notarized, so Gatekeeper

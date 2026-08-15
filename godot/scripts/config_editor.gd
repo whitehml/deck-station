@@ -14,6 +14,7 @@ const TAG_WEBCAM := "Webcam"
 const TAG_ETHERNET_DEVICE := "EthernetDevice"
 
 var _catalog: Array = []
+var _picker_entries: Array = []
 var _config: RobotConfig = null  # working (edited) model
 var _meta: Dictionary = {}  # meta of the loaded config
 var _baseline_xml := ""  # serialized model as last loaded/saved
@@ -36,6 +37,7 @@ func _ready() -> void:
 	RobotClient.scan_result_received.connect(_on_scan_result)
 	RobotClient.configurations_changed.connect(_on_configs_changed)
 	RobotClient.connection_changed.connect(_on_connection_changed)
+	DeviceFilter.changed.connect(_apply_device_filter)
 	%ScanButton.pressed.connect(_on_scan)
 	%SaveButton.pressed.connect(_on_save)
 	%SaveAsButton.pressed.connect(_on_save_as)
@@ -263,9 +265,9 @@ func _rename_node(node: Dictionary) -> void:
 func _open_add_device(module: Dictionary) -> void:
 	_add_device_target = module
 	_add_device_popup.clear()
-	for i in _catalog.size():
-		_add_device_popup.add_item(_catalog[i].label, i)
-	if not _catalog.is_empty():
+	for i in _picker_entries.size():
+		_add_device_popup.add_item(_picker_entries[i].label, i)
+	if not _picker_entries.is_empty():
 		_add_device_popup.add_separator()
 	_add_device_popup.add_item("Custom tag…", CUSTOM_ID)
 	_add_device_popup.reset_size()
@@ -282,7 +284,7 @@ func _on_add_device_id(id: int) -> void:
 		_custom_dialog_mode = CustomDialogMode.CUSTOM_TAG
 		_custom_dialog.popup_centered()
 		return
-	var entry: Dictionary = _catalog[id]
+	var entry: Dictionary = _picker_entries[id]
 	_append_device(_add_device_target, entry.tag, entry.needs_bus)
 
 
@@ -487,6 +489,11 @@ func _is_new() -> bool:
 
 func _on_device_list(json: String) -> void:
 	_catalog = DeviceCatalog.parse(json)
+	_apply_device_filter()
+
+
+func _apply_device_filter() -> void:
+	_picker_entries = DeviceFilter.visible(_catalog)
 
 
 ## Action-button enablement tracks whether the loaded config exists in the

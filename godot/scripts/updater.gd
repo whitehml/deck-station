@@ -16,7 +16,6 @@ const HEADERS := [
 	"User-Agent: deck-station-updater",
 ]
 
-const BIN_DIR := "bin"
 const STAGED_DIR := "bin.new"
 const STAGING_DIR := ".staging"
 const SUMS_ASSET := "SHA256SUMS"
@@ -121,30 +120,10 @@ func current_version() -> String:
 ## --- Install layout ---
 
 
-## The app runs out of `<root>/bin/`, but not always directly inside it — a
-## macOS export nests it in an `.app` bundle — so walk up from the resolved
-## binary to the `bin` directory, and confirm the stub sits beside it.
-func install_root() -> String:
-	var dir := OS.get_executable_path().get_base_dir()
-	while not dir.is_empty():
-		if dir.get_file() == BIN_DIR:
-			var root := dir.get_base_dir()
-			return root if FileAccess.file_exists(root.path_join(_launcher_name())) else ""
-		var parent := dir.get_base_dir()
-		if parent == dir:
-			break
-		dir = parent
-	return ""
-
-
-func _launcher_name() -> String:
-	return "deck-station.exe" if OS.get_name() == "Windows" else "deck-station.x86_64"
-
-
 func _unavailable_reason() -> String:
 	if current_version() == DEV_VERSION:
 		return "This is a source build.\n\nUpdate it with `git pull` and `cargo xtask export`."
-	var root := install_root()
+	var root := InstallPaths.root()
 	if root.is_empty():
 		return (
 			"This install isn't managed by the updater.\n\nDownload a release bundle from\n%s"
@@ -285,7 +264,7 @@ func _apply(release: Dictionary) -> String:
 		return "The download failed its checksum.\n\nNothing was installed."
 
 	_message.dialog_text = "Installing…"
-	return _install(install_root(), archive)
+	return _install(InstallPaths.root(), archive)
 
 
 ## Unpacks beside the live install and leaves the new build staged as
@@ -302,10 +281,10 @@ func _install(root: String, archive: String) -> String:
 		return extracted
 
 	# Bundles carry a whole install; only the app directory is transplanted.
-	var payload := staging.path_join(BIN_DIR)
+	var payload := staging.path_join(InstallPaths.BIN_DIR)
 	if not DirAccess.dir_exists_absolute(payload):
 		_remove_tree(staging)
-		return "The bundle didn't contain a %s directory." % BIN_DIR
+		return "The bundle didn't contain a %s directory." % InstallPaths.BIN_DIR
 
 	var target := root.path_join(STAGED_DIR)
 	_remove_tree(target)

@@ -17,6 +17,7 @@ const PAGE_ORDER: Array[StringName] = [&"drive", &"graphs", &"opmodes", &"config
 const UPDATE_ID := 1000
 const QUIT_ID := 1001
 const CONTROLS_ID := 1002
+const DEVICE_FILTER_ID := 1003
 const SETTINGS_PATH := "user://settings.cfg"
 const UPDATER := preload("res://scripts/updater.gd")
 const CONTROLS_HELP := preload("res://scripts/controls_help.gd")
@@ -27,6 +28,7 @@ var _theme_index := 0
 var _quit_dialog: ConfirmationDialog
 var _updater: Node
 var _controls_help: AcceptDialog
+var _device_filter_dialog: DeviceFilterDialog
 var _clock_idle := false
 
 @onready var _pages := {
@@ -161,12 +163,16 @@ func _setup_settings_menu() -> void:
 
 	popup.add_separator()
 	popup.add_item("Controls", CONTROLS_ID)
+	popup.add_item("Device Filter", DEVICE_FILTER_ID)
 	popup.add_item("Check for Updates", UPDATE_ID)
 	popup.add_item("Quit", QUIT_ID)
 	popup.id_pressed.connect(_on_settings_id)
 
 	_controls_help = CONTROLS_HELP.new()
 	add_child(_controls_help)
+
+	_device_filter_dialog = DeviceFilterDialog.new()
+	add_child(_device_filter_dialog)
 
 	_updater = UPDATER.new()
 	add_child(_updater)
@@ -186,6 +192,8 @@ func _on_settings_id(id: int) -> void:
 		_updater.run()
 	elif id == CONTROLS_ID:
 		_controls_help.popup_centered_ratio(0.8)
+	elif id == DEVICE_FILTER_ID:
+		_device_filter_dialog.open()
 
 
 func _select_theme(index: int) -> void:

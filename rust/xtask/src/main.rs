@@ -51,6 +51,8 @@ const LAUNCHER_BINARY: &str = "launcher.exe";
 #[cfg(not(windows))]
 const LAUNCHER_BINARY: &str = "launcher";
 
+const DEVICE_FILTER: &str = "device_filter.json";
+
 struct LibNames {
     built: &'static str,
     prefix: &'static str,
@@ -163,6 +165,11 @@ fn export() -> Result {
             .join("rust/target/release")
             .join(LAUNCHER_BINARY),
         build.join(APP_BINARY),
+    )?;
+
+    fs::copy(
+        repo_root().join("packaging").join(DEVICE_FILTER),
+        build.join(DEVICE_FILTER),
     )?;
 
     println!("exported {version} -> {}", build.display());

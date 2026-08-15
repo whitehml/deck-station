@@ -117,7 +117,7 @@ Install the toolchain first:
   `rust/rust-toolchain.toml`, so rustup installs it automatically on the first
   build. Linux/WSL2 also needs a C toolchain:
   `sudo apt install build-essential`.
-- Godot 4.4.1 (standard, non-.NET) from godotengine.org, on `PATH` as `godot4`,
+- Godot 4.7.1 (standard, non-.NET) from godotengine.org, on `PATH` as `godot4`,
   plus the matching export templates (Editor -> Manage Export Templates ->
   Download and Install).
 

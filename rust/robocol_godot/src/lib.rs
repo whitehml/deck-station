@@ -31,9 +31,9 @@
 )]
 
 use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, Sender, TryRecvError};
-use std::sync::Arc;
 use std::time::Instant;
 
 use godot::classes::{Image, ImageTexture, Node};
@@ -41,7 +41,7 @@ use godot::prelude::*;
 
 use robocol::client::{ClientConfig, Event, RobocolClient};
 use robocol::cmd::{self, ConfigMeta, OpModeMeta};
-use robocol::packets::{Gamepad, BATTERY_LEVEL_KEY, RC_BATTERY_STATUS_KEY, SYSTEM_KEY_PREFIX};
+use robocol::packets::{BATTERY_LEVEL_KEY, Gamepad, RC_BATTERY_STATUS_KEY, SYSTEM_KEY_PREFIX};
 use robocol::types::GamepadType;
 use robocol::video::{self, StreamConfig, VideoEvent};
 

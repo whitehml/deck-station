@@ -1,7 +1,7 @@
 [package]
 name = "robocol_godot"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 license = "MIT"
 description = "GDExtension bridge exposing the robocol client to the Godot UI"
 
@@ -9,9 +9,9 @@ description = "GDExtension bridge exposing the robocol client to the Godot UI"
 crate-type = ["cdylib"]
 
 [dependencies]
-# 0.5 needs rustc >=1.94 (satisfied by our 1.97 pin). api-4-4 matches the
-# installed Godot 4.4.1 (default API is newer).
-godot = { version = "0.5", features = ["api-4-4"] }
+# 0.5 needs rustc >=1.94 (satisfied by our 1.97 pin). api-4-7 matches the
+# installed Godot 4.7.1 (default API is newer).
+godot = { version = "0.5.5", features = ["api-4-7"] }
 # The protocol core. Git submodule at external/robocol during protocol
 # co-dev; swap to a pinned git-dep once the wire formats stabilize.
 robocol = { path = "../../external/robocol/robocol" }

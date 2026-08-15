@@ -241,6 +241,9 @@ func _on_grip_hold_started(grip: StringName) -> void:
 		&"R4":
 			if GamepadBridge.is_text_focused():
 				return
+			if _controls_help.visible:
+				_controls_help.focus_page()
+				return
 			var target := _first_focusable(_pages[_current_page])
 			if target:
 				target.grab_focus()

@@ -123,6 +123,9 @@ jobs:
           cp build/deck-station.console.exe stage/windows/bin/ 2>/dev/null || true
           cp native/launcher.exe stage/windows/deck-station.exe
 
+          cp packaging/device_filter.json stage/linux/
+          cp packaging/device_filter.json stage/windows/
+
           tar -czf "dist/deck-station-${VERSION}-linux-x86_64.tar.gz" -C stage/linux .
           (cd stage/windows \
             && zip -qr "../../dist/deck-station-${VERSION}-windows-x86_64-unsigned.zip" .)

@@ -9,7 +9,7 @@ const PHASE_NAMES := {
 
 const MATCH_SECONDS := 120.0
 const ENDGAME_SECONDS := 30.0
-const SLOT_COLORS := {1: Color.GREEN_YELLOW, 2: Color.ORANGE}
+const SLOT_STATUS := {1: &"slot1", 2: &"slot2"}
 
 const PAGE_ORDER: Array[StringName] = [&"drive", &"graphs", &"opmodes", &"config"]
 
@@ -30,6 +30,7 @@ var _updater: Node
 var _controls_help: AcceptDialog
 var _device_filter_dialog: DeviceFilterDialog
 var _clock_idle := false
+var _connected := false
 
 @onready var _pages := {
 	&"drive": %DrivePage,
@@ -154,8 +155,8 @@ func _setup_settings_menu() -> void:
 	var popup: PopupMenu = %SettingsButton.get_popup()
 	var themes := PopupMenu.new()
 	themes.name = "ThemesMenu"
-	for i in AppThemes.NAMES.size():
-		themes.add_radio_check_item(AppThemes.NAMES[i], i)
+	for i in AppThemes.THEMES.size():
+		themes.add_radio_check_item(AppThemes.spec(i)[&"name"], i)
 	themes.set_item_checked(_theme_index, true)
 	themes.id_pressed.connect(_select_theme)
 	popup.add_child(themes)
@@ -199,7 +200,7 @@ func _on_settings_id(id: int) -> void:
 func _select_theme(index: int) -> void:
 	_theme_index = index
 	var themes: PopupMenu = %SettingsButton.get_popup().get_node("ThemesMenu")
-	for i in AppThemes.NAMES.size():
+	for i in AppThemes.THEMES.size():
 		themes.set_item_checked(i, i == index)
 	_apply_theme(index)
 	_save_settings()
@@ -208,13 +209,14 @@ func _select_theme(index: int) -> void:
 func _apply_theme(index: int) -> void:
 	theme = AppThemes.for_index(index)
 	_background.color = AppThemes.background_color(index)
+	_refresh_status_tints()
 
 
 func _load_settings() -> void:
 	var cfg := ConfigFile.new()
 	if cfg.load(SETTINGS_PATH) != OK:
 		return
-	_theme_index = clampi(int(cfg.get_value("ui", "theme", 0)), 0, AppThemes.NAMES.size() - 1)
+	_theme_index = clampi(int(cfg.get_value("ui", "theme", 0)), 0, AppThemes.THEMES.size() - 1)
 
 
 func _save_settings() -> void:
@@ -307,10 +309,24 @@ func _first_focusable(node: Node) -> Control:
 
 ## --- Status bar ---
 
+func _tint(label: Label, status: StringName) -> void:
+	label.add_theme_color_override("font_color", get_theme_color(status, AppThemes.STATUS_TYPE))
+
+
+func _untint(label: Label) -> void:
+	label.remove_theme_color_override("font_color")
+
+
+func _refresh_status_tints() -> void:
+	_on_connection_changed(_connected)
+	_update_slot_badge()
+	_clock_idle = false
+
 
 func _on_connection_changed(connected: bool) -> void:
+	_connected = connected
 	%ConnectionLabel.text = "CONNECTED" if connected else "DISCONNECTED"
-	%ConnectionLabel.modulate = Color.GREEN_YELLOW if connected else Color.INDIAN_RED
+	_tint(%ConnectionLabel, &"connected" if connected else &"disconnected")
 
 
 func _on_phase_changed(phase: int, opmode_name: String) -> void:
@@ -372,9 +388,9 @@ func _on_joy_connection_changed(_device: int, _connected: bool) -> void:
 
 func _update_slot_badge() -> void:
 	%GP1Badge.text = "1:" + _slot_letter(1)
-	%GP1Badge.modulate = SLOT_COLORS[1]
+	_tint(%GP1Badge, SLOT_STATUS[1])
 	%GP2Badge.text = "2:" + _slot_letter(2)
-	%GP2Badge.modulate = SLOT_COLORS[2]
+	_tint(%GP2Badge, SLOT_STATUS[2])
 
 
 func _slot_letter(slot_n: int) -> String:
@@ -401,10 +417,13 @@ func _update_clock() -> void:
 	if RobotClient.phase != RobotClient.Phase.RUNNING:
 		if not _clock_idle:
 			%MatchClockLabel.text = "-:--"
-			%MatchClockLabel.modulate = Color.WHITE
+			_untint(%MatchClockLabel)
 			_clock_idle = true
 		return
 	_clock_idle = false
 	var remaining := maxf(0.0, MATCH_SECONDS - RobotClient.run_elapsed())
 	%MatchClockLabel.text = "%d:%04.1f" % [int(remaining) / 60, fmod(remaining, 60.0)]
-	%MatchClockLabel.modulate = Color.ORANGE_RED if remaining <= ENDGAME_SECONDS else Color.WHITE
+	if remaining <= ENDGAME_SECONDS:
+		_tint(%MatchClockLabel, &"endgame")
+	else:
+		_untint(%MatchClockLabel)

@@ -45,39 +45,48 @@ grow_vertical = 2
 
 [node name="StatusBar" type="PanelContainer" parent="Layout"]
 layout_mode = 2
+theme_type_variation = &"StatusBar"
 
 [node name="StatusRow" type="HBoxContainer" parent="Layout/StatusBar"]
 layout_mode = 2
 theme_override_constants/separation = 16
 
-[node name="ConnectionLabel" type="Label" parent="Layout/StatusBar/StatusRow"]
+[node name="StatusCard" type="PanelContainer" parent="Layout/StatusBar/StatusRow"]
+layout_mode = 2
+theme_type_variation = &"StatusBarCard"
+
+[node name="StatusGroup" type="HBoxContainer" parent="Layout/StatusBar/StatusRow/StatusCard"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="ConnectionLabel" type="Label" parent="Layout/StatusBar/StatusRow/StatusCard/StatusGroup"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "DISCONNECTED"
 
-[node name="PhaseLabel" type="Label" parent="Layout/StatusBar/StatusRow"]
+[node name="PhaseLabel" type="Label" parent="Layout/StatusBar/StatusRow/StatusCard/StatusGroup"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "—"
 
-[node name="MatchClockLabel" type="Label" parent="Layout/StatusBar/StatusRow"]
+[node name="MatchClockLabel" type="Label" parent="Layout/StatusBar/StatusRow/StatusCard/StatusGroup"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 22
 text = "-:--"
 
-[node name="BatteryLabel" type="Label" parent="Layout/StatusBar/StatusRow"]
+[node name="BatteryLabel" type="Label" parent="Layout/StatusBar/StatusRow/StatusCard/StatusGroup"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "— V"
 
-[node name="GP1Badge" type="Label" parent="Layout/StatusBar/StatusRow"]
+[node name="GP1Badge" type="Label" parent="Layout/StatusBar/StatusRow/StatusCard/StatusGroup"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 22
 text = "1:—"
 
-[node name="GP2Badge" type="Label" parent="Layout/StatusBar/StatusRow"]
+[node name="GP2Badge" type="Label" parent="Layout/StatusBar/StatusRow/StatusCard/StatusGroup"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 22
@@ -86,6 +95,7 @@ text = "2:—"
 [node name="StopButton" type="Button" parent="Layout/StatusBar/StatusRow"]
 unique_name_in_owner = true
 layout_mode = 2
+theme_type_variation = &"StatusBarButton"
 theme_override_font_sizes/font_size = 22
 disabled = true
 text = "STOP"
@@ -97,6 +107,7 @@ size_flags_horizontal = 3
 [node name="DriveTab" type="Button" parent="Layout/StatusBar/StatusRow"]
 unique_name_in_owner = true
 layout_mode = 2
+theme_type_variation = &"StatusBarButton"
 toggle_mode = true
 button_pressed = true
 button_group = SubResource("ButtonGroup_tabs")
@@ -105,6 +116,7 @@ text = "Drive"
 [node name="GraphsTab" type="Button" parent="Layout/StatusBar/StatusRow"]
 unique_name_in_owner = true
 layout_mode = 2
+theme_type_variation = &"StatusBarButton"
 toggle_mode = true
 button_group = SubResource("ButtonGroup_tabs")
 text = "Graphs"
@@ -112,6 +124,7 @@ text = "Graphs"
 [node name="OpModesTab" type="Button" parent="Layout/StatusBar/StatusRow"]
 unique_name_in_owner = true
 layout_mode = 2
+theme_type_variation = &"StatusBarButton"
 toggle_mode = true
 button_group = SubResource("ButtonGroup_tabs")
 text = "OpModes"
@@ -119,6 +132,7 @@ text = "OpModes"
 [node name="ConfigTab" type="Button" parent="Layout/StatusBar/StatusRow"]
 unique_name_in_owner = true
 layout_mode = 2
+theme_type_variation = &"StatusBarButton"
 toggle_mode = true
 button_group = SubResource("ButtonGroup_tabs")
 text = "Config"
@@ -126,6 +140,7 @@ text = "Config"
 [node name="SettingsButton" type="MenuButton" parent="Layout/StatusBar/StatusRow"]
 unique_name_in_owner = true
 layout_mode = 2
+theme_type_variation = &"StatusBarMenuButton"
 flat = false
 text = "Settings"
 

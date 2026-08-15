@@ -66,6 +66,13 @@ func is_paused() -> bool:
 	return _paused
 
 
+func _legend(key: String) -> String:
+	var s: TelemetrySeries = TelemetryLog.series(key)
+	if s == null or s.unit.is_empty():
+		return key
+	return "%s (%s)" % [key, s.unit]
+
+
 func _latest_time() -> float:
 	var t_max := -INF
 	for key in keys:
@@ -178,7 +185,13 @@ func _draw() -> void:
 	for ki in range(keys.size()):
 		var color: Color = SERIES_COLORS[ki % SERIES_COLORS.size()]
 		draw_string(
-			font, Vector2(12, 24 + ki * 18), keys[ki], HORIZONTAL_ALIGNMENT_LEFT, -1, 16, color
+			font,
+			Vector2(12, 24 + ki * 18),
+			_legend(keys[ki]),
+			HORIZONTAL_ALIGNMENT_LEFT,
+			-1,
+			16,
+			color
 		)
 	if _paused:
 		draw_string(

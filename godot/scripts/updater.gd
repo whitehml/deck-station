@@ -24,12 +24,19 @@ const SIG_ASSET := "SHA256SUMS.sig"
 const PUBLIC_KEY := "res://assets/keys/public.pub"
 const ASSET_PREFIX := "deck-station-"
 const DOWNLOAD_DIR := "user://updates"
+const SYSTEM_CA_FILE := "user://system-ca.pem"
+const SYSTEM_CA_PATHS := [
+	"/etc/ssl/certs/ca-certificates.crt",
+	"/etc/pki/tls/certs/ca-bundle.crt",
+	"/etc/ssl/cert.pem",
+]
 const REQUEST_TIMEOUT := 20.0
 const DEV_VERSION := "dev"
 
 var _http: HTTPRequest
 var _message: AcceptDialog
 var _confirm: ConfirmationDialog
+var _system_trust_tried := false
 
 
 func _ready() -> void:
@@ -218,11 +225,70 @@ func _missing_asset(found: Dictionary) -> String:
 
 
 func _fetch_url(url: String) -> Dictionary:
+	var attempt := await _perform(url)
+	if attempt.has("start_error"):
+		return {"error": "Couldn't reach GitHub (error %d)." % attempt["start_error"]}
+	return _response(attempt["result"])
+
+
+func _perform(url: String) -> Dictionary:
 	var err := _http.request(url, HEADERS)
 	if err != OK:
-		return {"error": "Couldn't reach GitHub (error %d)." % err}
+		return {"start_error": err}
 	var result: Array = await _http.request_completed
-	return _response(result)
+	if result[0] != HTTPRequest.RESULT_TLS_HANDSHAKE_ERROR or not _trust_system_certificates():
+		return {"result": result}
+
+	err = _http.request(url, HEADERS)
+	if err != OK:
+		return {"start_error": err}
+	return {"result": await _http.request_completed}
+
+
+func _trust_system_certificates() -> bool:
+	if _system_trust_tried:
+		return false
+	_system_trust_tried = true
+
+	if not _export_system_certificates():
+		return false
+	var bundle := X509Certificate.new()
+	if bundle.load(SYSTEM_CA_FILE) != OK:
+		return false
+	_http.set_tls_options(TLSOptions.client(bundle))
+	return true
+
+
+func _export_system_certificates() -> bool:
+	match OS.get_name():
+		"Windows":
+			return _export_windows_certificates()
+		"Linux", "macOS":
+			return _copy_system_bundle()
+	return false
+
+
+func _export_windows_certificates() -> bool:
+	var destination := ProjectSettings.globalize_path(SYSTEM_CA_FILE).replace("'", "''")
+	var script := (
+		"$b=New-Object System.Text.StringBuilder;"
+		+ "foreach($c in Get-ChildItem -ErrorAction SilentlyContinue -Path "
+		+ "Cert:\\LocalMachine\\Root,Cert:\\LocalMachine\\AuthRoot,Cert:\\CurrentUser\\Root,"
+		+ "Cert:\\CurrentUser\\AuthRoot){"
+		+ "$null=$b.AppendLine('-----BEGIN CERTIFICATE-----');"
+		+ "$null=$b.AppendLine([Convert]::ToBase64String($c.RawData,'InsertLineBreaks'));"
+		+ "$null=$b.AppendLine('-----END CERTIFICATE-----')};"
+		+ "[IO.File]::WriteAllText('%s',$b.ToString())" % destination
+	)
+	var arguments := ["-NoProfile", "-NonInteractive", "-Command", script]
+	return OS.execute("powershell", arguments) == 0
+
+
+func _copy_system_bundle() -> bool:
+	for path in SYSTEM_CA_PATHS:
+		if FileAccess.file_exists(path):
+			return DirAccess.copy_absolute(path, SYSTEM_CA_FILE) == OK
+	return false
 
 
 func _response(result: Array) -> Dictionary:
@@ -242,8 +308,9 @@ func _failure_reason(code: int) -> String:
 			detail = "The connection failed. Check that you're on a network with internet access."
 		HTTPRequest.RESULT_TLS_HANDSHAKE_ERROR:
 			detail = (
-				"The TLS handshake failed. Something is intercepting HTTPS, "
-				+ "or the system clock is wrong."
+				"The TLS handshake failed, and this machine's own certificates "
+				+ "didn't verify GitHub either. Check the system clock, or "
+				+ "download the release by hand from\n%s" % [RELEASES_PAGE % REPO]
 			)
 		HTTPRequest.RESULT_TIMEOUT:
 			detail = "The request timed out after %d seconds." % int(REQUEST_TIMEOUT)
@@ -311,18 +378,14 @@ func _install(root: String, archive: String) -> String:
 
 func _download(url: String, destination: String) -> String:
 	_http.download_file = destination
-	var err := _http.request(url, HEADERS)
-	if err != OK:
-		_http.download_file = ""
-		return "Couldn't start the download (error %d)." % err
-
 	set_process(true)
-	var result: Array = await _http.request_completed
+	var attempt := await _perform(url)
 	set_process(false)
 	_http.download_file = ""
 
-	var response := _response(result)
-	return response.get("error", "")
+	if attempt.has("start_error"):
+		return "Couldn't start the download (error %d)." % attempt["start_error"]
+	return _response(attempt["result"]).get("error", "")
 
 
 func _trusted_hash(release: Dictionary) -> Dictionary:

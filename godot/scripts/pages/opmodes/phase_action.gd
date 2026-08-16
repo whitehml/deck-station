@@ -22,7 +22,7 @@ static func apply(button: Button, phase: int) -> void:
 	button.text = LABELS.get(phase, DEFAULT_LABEL)
 	button.add_theme_color_override(
 		&"font_color",
-		button.get_theme_color(STATUS_NAMES.get(phase, DEFAULT_STATUS), AppThemes.STATUS_TYPE)
+		button.get_theme_color(STATUS_NAMES.get(phase, DEFAULT_STATUS), ThemeTokens.STATUS_TYPE)
 	)
 	button.disabled = (
 		phase == RobotClient.Phase.DISCONNECTED

@@ -8,9 +8,6 @@ extends Control
 
 signal answered(accepted: bool)
 
-const REPO := "whitehml/deck-station"
-const RELEASE_API := "https://api.github.com/repos/%s/releases/tags/latest"
-const RELEASES_PAGE := "https://github.com/%s/releases"
 const HEADERS := [
 	"Accept: application/vnd.github+json",
 	"User-Agent: deck-station-updater",
@@ -20,10 +17,8 @@ const STAGED_DIR := "bin.new"
 const STAGING_DIR := ".staging"
 const SUMS_ASSET := "SHA256SUMS"
 const SIG_ASSET := "SHA256SUMS.sig"
-const PUBLIC_KEY := "res://assets/keys/public.pub"
 const ASSET_PREFIX := "deck-station-"
 const DOWNLOAD_DIR := "user://updates"
-const REQUEST_TIMEOUT := 20.0
 const DEV_VERSION := "dev"
 
 var _http: HTTPRequest
@@ -33,7 +28,7 @@ var _confirm: ConfirmationDialog
 
 func _ready() -> void:
 	_http = HTTPRequest.new()
-	_http.timeout = REQUEST_TIMEOUT
+	_http.timeout = ReleaseFeed.REQUEST_TIMEOUT
 	_http.use_threads = true
 	_http.set_tls_options(TLSOptions.client_unsafe())
 	add_child(_http)
@@ -127,7 +122,7 @@ func _unavailable_reason() -> String:
 	if root.is_empty():
 		return (
 			"This install isn't managed by the updater.\n\nDownload a release bundle from\n%s"
-			% [RELEASES_PAGE % REPO]
+			% [ReleaseFeed.RELEASES_PAGE % ReleaseFeed.REPO]
 		)
 	if not _writable(root):
 		return "The install directory isn't writable:\n\n%s" % root
@@ -161,7 +156,7 @@ func _fetch_latest() -> Dictionary:
 	if suffix.is_empty():
 		return {"error": "No release bundle is published for %s." % OS.get_name()}
 
-	var response := await _fetch_url(RELEASE_API % REPO)
+	var response := await _fetch_url(ReleaseFeed.RELEASE_API % ReleaseFeed.REPO)
 	if response.has("error"):
 		return response
 
@@ -213,33 +208,10 @@ func _perform(url: String) -> Dictionary:
 
 func _response(result: Array) -> Dictionary:
 	if result[0] != HTTPRequest.RESULT_SUCCESS:
-		return {"error": "Couldn't reach GitHub.\n\n%s" % _failure_reason(result[0])}
+		return {"error": "Couldn't reach GitHub.\n\n%s" % ReleaseFeed.failure_reason(result[0])}
 	if result[1] != 200:
 		return {"error": "GitHub answered with HTTP %d." % result[1]}
 	return {"body": result[3]}
-
-
-func _failure_reason(code: int) -> String:
-	var detail := ""
-	match code:
-		HTTPRequest.RESULT_CANT_RESOLVE:
-			detail = "The address couldn't be resolved. Check DNS."
-		HTTPRequest.RESULT_CANT_CONNECT, HTTPRequest.RESULT_CONNECTION_ERROR:
-			detail = "The connection failed. Check that you're on a network with internet access."
-		HTTPRequest.RESULT_TLS_HANDSHAKE_ERROR:
-			detail = (
-				"The TLS connection to GitHub failed. Check the system clock, or "
-				+ "download the release by hand from\n%s" % [RELEASES_PAGE % REPO]
-			)
-		HTTPRequest.RESULT_TIMEOUT:
-			detail = "The request timed out after %d seconds." % int(REQUEST_TIMEOUT)
-		HTTPRequest.RESULT_REDIRECT_LIMIT_REACHED:
-			detail = "Too many redirects."
-		HTTPRequest.RESULT_DOWNLOAD_FILE_CANT_OPEN, HTTPRequest.RESULT_DOWNLOAD_FILE_WRITE_ERROR:
-			detail = "The download couldn't be written to disk."
-		_:
-			detail = "Check that you're on a network with internet access."
-	return "%s\n\n(HTTPRequest result %d)" % [detail, code]
 
 
 ## --- Download and apply ---
@@ -271,25 +243,25 @@ func _apply(release: Dictionary) -> String:
 ## `bin.new/`; the launcher promotes it on the next start.
 func _install(root: String, archive: String) -> String:
 	var staging := root.path_join(STAGING_DIR)
-	_remove_tree(staging)
+	ReleaseArchive.remove_tree(staging)
 	DirAccess.make_dir_recursive_absolute(staging)
 
-	var extracted := _extract(archive, staging)
+	var extracted := ReleaseArchive.extract(archive, staging)
 	DirAccess.remove_absolute(archive)
 	if not extracted.is_empty():
-		_remove_tree(staging)
+		ReleaseArchive.remove_tree(staging)
 		return extracted
 
 	# Bundles carry a whole install; only the app directory is transplanted.
 	var payload := staging.path_join(InstallPaths.BIN_DIR)
 	if not DirAccess.dir_exists_absolute(payload):
-		_remove_tree(staging)
+		ReleaseArchive.remove_tree(staging)
 		return "The bundle didn't contain a %s directory." % InstallPaths.BIN_DIR
 
 	var target := root.path_join(STAGED_DIR)
-	_remove_tree(target)
+	ReleaseArchive.remove_tree(target)
 	var moved := DirAccess.rename_absolute(payload, target)
-	_remove_tree(staging)
+	ReleaseArchive.remove_tree(staging)
 	if moved != OK:
 		return "Couldn't stage the new version (error %d)." % moved
 	return ""
@@ -314,82 +286,24 @@ func _trusted_hash(release: Dictionary) -> Dictionary:
 	var signature := await _fetch_url(str(release["sig_url"]))
 	if signature.has("error"):
 		return signature
-	if not _signed(sums["body"], signature["body"]):
+	if not ReleaseVerify.signed(sums["body"], signature["body"]):
 		return {
 			"error":
 			(
 				"%s failed its signature check.\n\nNothing was downloaded.\n\n" % SUMS_ASSET
-				+ "Download a release bundle by hand from\n%s" % [RELEASES_PAGE % REPO]
+				+ (
+					"Download a release bundle by hand from\n%s"
+					% [ReleaseFeed.RELEASES_PAGE % ReleaseFeed.REPO]
+				)
 			)
 		}
 
-	var expected := _expected_hash(sums["body"].get_string_from_utf8(), str(release["name"]))
+	var expected := ReleaseVerify.expected_hash(
+		sums["body"].get_string_from_utf8(), str(release["name"])
+	)
 	if expected.is_empty():
 		return {"error": "%s has no entry for this bundle." % SUMS_ASSET}
 	return {"hash": expected}
-
-
-func _signed(sums: PackedByteArray, signature: PackedByteArray) -> bool:
-	var key := CryptoKey.new()
-	if key.load(PUBLIC_KEY, true) != OK:
-		return false
-	var ctx := HashingContext.new()
-	ctx.start(HashingContext.HASH_SHA256)
-	ctx.update(sums)
-	return Crypto.new().verify(HashingContext.HASH_SHA256, ctx.finish(), signature, key)
-
-
-func _expected_hash(sums: String, asset_name: String) -> String:
-	for line in sums.split("\n", false):
-		var parts := line.split(" ", false)
-		if parts.size() >= 2 and parts[parts.size() - 1].get_file() == asset_name:
-			return parts[0]
-	return ""
-
-
-## Godot reads zip natively but has no tar.gz; `tar` is present on every Linux
-## and preserves the executable bit that ZIPReader would drop.
-func _extract(archive: String, destination: String) -> String:
-	if OS.get_name() == "Windows":
-		return _extract_zip(archive, destination)
-
-	var output: Array = []
-	var code := OS.execute("tar", ["-xzf", archive, "-C", destination], output, true)
-	if code != 0:
-		return "Couldn't unpack the bundle.\n\n%s" % "\n".join(output)
-	return ""
-
-
-func _extract_zip(archive: String, destination: String) -> String:
-	var zip := ZIPReader.new()
-	if zip.open(archive) != OK:
-		return "Couldn't open the downloaded bundle."
-
-	for entry in zip.get_files():
-		var path := destination.path_join(entry)
-		if entry.ends_with("/"):
-			DirAccess.make_dir_recursive_absolute(path)
-			continue
-		DirAccess.make_dir_recursive_absolute(path.get_base_dir())
-		var file := FileAccess.open(path, FileAccess.WRITE)
-		if file == null:
-			zip.close()
-			return "Couldn't write %s." % path
-		file.store_buffer(zip.read_file(entry))
-		file.close()
-
-	zip.close()
-	return ""
-
-
-func _remove_tree(path: String) -> void:
-	if not DirAccess.dir_exists_absolute(path):
-		return
-	for entry in DirAccess.get_directories_at(path):
-		_remove_tree(path.path_join(entry))
-	for entry in DirAccess.get_files_at(path):
-		DirAccess.remove_absolute(path.path_join(entry))
-	DirAccess.remove_absolute(path)
 
 
 ## --- Dialogs ---

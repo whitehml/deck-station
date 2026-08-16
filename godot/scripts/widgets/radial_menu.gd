@@ -113,4 +113,4 @@ func _draw() -> void:
 
 
 func _color(name: StringName) -> Color:
-	return get_theme_color(name, AppThemes.RADIAL_TYPE)
+	return get_theme_color(name, ThemeTokens.RADIAL_TYPE)

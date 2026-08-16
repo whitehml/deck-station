@@ -31,9 +31,6 @@ const SCAN_ROW_SEPARATION := 12
 const SCAN_ROW_GAP := 16
 const SCAN_SUBTLE_ALPHA := 0.7
 
-const XML_TAG_PATTERN := "^[A-Za-z_:][A-Za-z_:0-9\\-.]*$"
-const XML_TAG_HINT := "Start with a letter, _ or :, then letters, digits, _ : - or ."
-
 var _catalog: Array = []
 var _flavors := {}
 var _picker_entries: Array = []
@@ -53,7 +50,6 @@ var _reactivate_dialog: ConfirmationDialog
 var _scan_dialog: AcceptDialog
 var _scan_list: VBoxContainer
 var _add_device_popup: PopupMenu
-var _tag_regex := RegEx.create_from_string(XML_TAG_PATTERN)
 
 
 func _ready() -> void:
@@ -174,7 +170,9 @@ func _build_device_row(module: Dictionary, dev: Dictionary) -> void:
 	row.add_child(kind)
 	row.add_child(_attr_line_edit(dev, "name"))
 	row.add_child(_port_label("port"))
-	row.add_child(_attr_options(dev, "port", _port_count(dev.tag)))
+	row.add_child(
+		_attr_options(dev, "port", DeviceCatalog.port_count(str(_flavors.get(dev.tag, ""))))
+	)
 	if dev.attrs.has("bus"):
 		row.add_child(_port_label("bus"))
 		row.add_child(_attr_options(dev, "bus", DeviceCatalog.BUS_COUNT))
@@ -273,7 +271,10 @@ func _delete_child(parent: Dictionary, child: Dictionary) -> void:
 
 func _add_hub(usb: Dictionary) -> void:
 	usb.children.append(
-		RobotConfig.element(TAG_LYNX_MODULE, {"name": _unique_name("Expansion Hub"), "port": "2"})
+		RobotConfig.element(
+			TAG_LYNX_MODULE,
+			{"name": DeviceNaming.unique_name(_config.root, "Expansion Hub"), "port": "2"}
+		)
 	)
 	_refresh_editor()
 
@@ -282,24 +283,18 @@ func _add_peripheral(tag: String, serial := "") -> void:
 	var attrs := {}
 	match tag:
 		TAG_WEBCAM:
-			attrs = {"name": _unique_name("Webcam 1"), "serialNumber": serial}
+			attrs = {
+				"name": DeviceNaming.unique_name(_config.root, "Webcam 1"), "serialNumber": serial
+			}
 		TAG_ETHERNET_DEVICE:
 			attrs = {
-				"name": _unique_name("limelight"),
+				"name": DeviceNaming.unique_name(_config.root, "limelight"),
 				"serialNumber": serial,
 				"port": "0",
-				"ipAddress": _ethernet_ip(serial)
+				"ipAddress": DeviceNaming.ethernet_ip(serial)
 			}
 	_config.root.children.append(RobotConfig.element(tag, attrs))
 	_refresh_editor()
-
-
-func _ethernet_ip(serial: String) -> String:
-	var octets := serial.get_slice(":", serial.get_slice_count(":") - 1).split(".")
-	if octets.size() != 4:
-		return ""
-	octets[3] = "1"
-	return ".".join(octets)
 
 
 func _rename_node(node: Dictionary) -> void:
@@ -342,7 +337,10 @@ func _on_add_device_id(id: int) -> void:
 
 
 func _append_device(module: Dictionary, tag: String, needs_bus: bool) -> void:
-	var attrs := {"name": _unique_name("new_device"), "port": str(_next_port(module, tag))}
+	var attrs := {
+		"name": DeviceNaming.unique_name(_config.root, "new_device"),
+		"port": str(DeviceNaming.next_port(module, str(_flavors.get(tag, "")), _flavors))
+	}
 	if needs_bus:
 		attrs["bus"] = "0"
 	module.children.append(RobotConfig.element(tag, attrs))
@@ -364,11 +362,7 @@ func _custom_error(text: String) -> String:
 	if text.strip_edges().is_empty():
 		return " "
 	if _custom_dialog_mode == CustomDialogMode.CUSTOM_TAG:
-		var tag := text.strip_edges()
-		if DeviceCatalog.is_structural(tag):
-			return "%s is a container, not a device on a hub port." % tag
-		if _tag_regex.search(tag) == null:
-			return "The RC will reject this tag. %s" % XML_TAG_HINT
+		return DeviceNaming.tag_error(text)
 	return ""
 
 
@@ -376,40 +370,6 @@ func _validate_custom(text: String) -> void:
 	var error := _custom_error(text)
 	_custom_hint.text = error
 	_custom_dialog.get_ok_button().disabled = not error.is_empty()
-
-
-func _port_count(tag: String) -> int:
-	return DeviceCatalog.port_count(str(_flavors.get(tag, "")))
-
-
-func _next_port(module: Dictionary, tag: String) -> int:
-	var flavor: String = str(_flavors.get(tag, ""))
-	var used := {}
-	for dev: Dictionary in module.children:
-		if str(_flavors.get(dev.tag, "")) == flavor:
-			used[int(str(dev.attrs.get("port", "-1")))] = true
-	for port in DeviceCatalog.port_count(flavor):
-		if not used.has(port):
-			return port
-	return 0
-
-
-func _unique_name(base: String) -> String:
-	var names := {}
-	_collect_names(_config.root, names)
-	if not names.has(base):
-		return base
-	var i := 2
-	while names.has(base + str(i)):
-		i += 1
-	return base + str(i)
-
-
-func _collect_names(node: Dictionary, names: Dictionary) -> void:
-	if node.attrs.has("name"):
-		names[node.attrs["name"]] = true
-	for child: Dictionary in node.get("children", []):
-		_collect_names(child, names)
 
 
 ## --- Scan ---

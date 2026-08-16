@@ -170,7 +170,7 @@ func _smoke_field() -> void:
 
 	var kinds := FieldLog.items().map(func(i: Dictionary) -> String: return i["kind"])
 	print("SMOKE field kinds: ", kinds)
-	for kind in FieldLog.KINDS:
+	for kind in FieldContract.KINDS:
 		assert(kinds.has(kind))
 
 	var multiple := FieldLog.items().filter(
@@ -179,7 +179,7 @@ func _smoke_field() -> void:
 	assert(multiple.size() > 1)
 
 	var entries: Array = await RobotClient.telemetry_received
-	assert(not RobotClient.format_telemetry(entries).contains(FieldLog.MARKER))
+	assert(not RobotClient.format_telemetry(entries).contains(FieldContract.MARKER))
 	print("SMOKE field lines hidden from telemetry text")
 
 

@@ -7,14 +7,12 @@ const TILES := 6
 const POINT_RADIUS := 4.0
 const POINT_HEADING_PX := 16.0
 const ARROW_HEAD_PX := 10.0
-const LABEL_SIZE := 12
 const HINT_SIZE := 16
 const ZONE_FILL_ALPHA := 0.22
 const FIELD_COLOR := Color(0.09, 0.11, 0.14)
 const TILE_COLOR := Color(1.0, 1.0, 1.0, 0.06)
 const CENTER_COLOR := Color(1.0, 1.0, 1.0, 0.12)
 const BORDER_COLOR := Color(0.31, 0.62, 1.0, 0.5)
-const CORNER_COLOR := Color(0.6, 0.64, 0.72)
 
 var _items: Array = []
 var _rect := Rect2()
@@ -44,16 +42,8 @@ func _on_image_changed(index: int) -> void:
 	queue_redraw()
 
 
-func _field_rect() -> Rect2:
-	var usable := size - Vector2(CORNER_PAD, CORNER_PAD) * 2.0
-	var side := maxf(minf(usable.x, usable.y), 1.0)
-	return Rect2((size - Vector2(side, side)) * 0.5, Vector2(side, side))
-
-
 func _to_screen(p: Vector2) -> Vector2:
-	var u := (p.x - FieldLog.frame_min.x) / _span.x
-	var v := (p.y - FieldLog.frame_min.y) / _span.y
-	return Vector2(_rect.position.x + u * _rect.size.x, _rect.end.y - v * _rect.size.y)
+	return FieldFrame.to_screen(p, _rect, FieldLog.frame_min, _span)
 
 
 func _to_screen_all(points: PackedVector2Array) -> PackedVector2Array:
@@ -64,12 +54,10 @@ func _to_screen_all(points: PackedVector2Array) -> PackedVector2Array:
 
 
 func _draw() -> void:
-	_rect = _field_rect()
-	_span = FieldLog.frame_max - FieldLog.frame_min
-	if is_zero_approx(_span.x) or is_zero_approx(_span.y):
-		_span = Vector2.ONE
+	_rect = FieldFrame.square(size, CORNER_PAD)
+	_span = FieldFrame.span(FieldLog.frame_min, FieldLog.frame_max)
 	_draw_backdrop()
-	_draw_corner_labels()
+	FieldFrame.draw_corners(self, _rect, FieldLog.frame_min, FieldLog.frame_max, CORNER_PAD)
 	if _items.is_empty():
 		_draw_hint()
 		return
@@ -92,31 +80,6 @@ func _draw_backdrop() -> void:
 			draw_line(Vector2(x, _rect.position.y), Vector2(x, _rect.end.y), color)
 			draw_line(Vector2(_rect.position.x, y), Vector2(_rect.end.x, y), color)
 	draw_rect(_rect, BORDER_COLOR, false, 2.0)
-
-
-func _draw_corner_labels() -> void:
-	var lo := FieldLog.frame_min
-	var hi := FieldLog.frame_max
-	var pad := CORNER_PAD * 0.25
-	_corner(Vector2(lo.x, hi.y), _rect.position + Vector2(0, -pad), HORIZONTAL_ALIGNMENT_LEFT)
-	_corner(hi, Vector2(_rect.end.x, _rect.position.y - pad), HORIZONTAL_ALIGNMENT_RIGHT)
-	_corner(
-		lo, Vector2(_rect.position.x, _rect.end.y + CORNER_PAD * 0.6), HORIZONTAL_ALIGNMENT_LEFT
-	)
-	_corner(
-		Vector2(hi.x, lo.y),
-		Vector2(_rect.end.x, _rect.end.y + CORNER_PAD * 0.6),
-		HORIZONTAL_ALIGNMENT_RIGHT
-	)
-
-
-func _corner(value: Vector2, at: Vector2, align: int) -> void:
-	var text := "%s, %s" % [_trim(value.x), _trim(value.y)]
-	var font := ThemeDB.fallback_font
-	var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, LABEL_SIZE).x
-	if align == HORIZONTAL_ALIGNMENT_RIGHT:
-		at.x -= width
-	draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, LABEL_SIZE, CORNER_COLOR)
 
 
 func _draw_hint() -> void:
@@ -213,11 +176,13 @@ func _draw_arrow(from: Vector2, to: Vector2, color: Color) -> void:
 
 func _draw_label(text: String, at: Vector2, color: Color) -> void:
 	var font := ThemeDB.fallback_font
-	var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, LABEL_SIZE).x
+	var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, FieldFrame.LABEL_SIZE).x
 	draw_string(
-		font, at - Vector2(width * 0.5, 0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, LABEL_SIZE, color
+		font,
+		at - Vector2(width * 0.5, 0),
+		text,
+		HORIZONTAL_ALIGNMENT_LEFT,
+		-1,
+		FieldFrame.LABEL_SIZE,
+		color
 	)
-
-
-func _trim(value: float) -> String:
-	return "%d" % int(value) if is_equal_approx(value, roundf(value)) else "%0.1f" % value

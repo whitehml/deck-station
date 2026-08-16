@@ -85,12 +85,12 @@ func _keyboard_page() -> Control:
 
 func _legend() -> Control:
 	var row := HFlowContainer.new()
-	row.add_theme_constant_override(&"h_separation", COLUMN_SEPARATION)
-	row.add_theme_constant_override(&"v_separation", ROW_SEPARATION)
+	row.add_theme_constant_override(&"h_separation", DocTable.COLUMN_SEPARATION)
+	row.add_theme_constant_override(&"v_separation", DocTable.ROW_SEPARATION)
 	row.alignment = FlowContainer.ALIGNMENT_CENTER
 	for entry: Array in KeyboardMap.LEGEND:
 		var item := HBoxContainer.new()
-		item.add_theme_constant_override(&"separation", ROW_SEPARATION)
+		item.add_theme_constant_override(&"separation", DocTable.ROW_SEPARATION)
 
 		var swatch := ColorRect.new()
 		swatch.color = KeyboardMap.ROLE_COLORS[entry[0]]

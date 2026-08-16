@@ -10,33 +10,17 @@ class CornerPreview:
 	extends Control
 
 	const PAD := 34.0
-	const LABEL_SIZE := 12
-	const BORDER := Color(0.31, 0.62, 1.0, 0.7)
 	const FILL := Color(0.09, 0.11, 0.14)
-	const TEXT := Color(0.6, 0.64, 0.72)
+	const BORDER := Color(0.31, 0.62, 1.0, 0.7)
 
 	var corner_min := Vector2.ZERO
 	var corner_max := Vector2.ONE
 
 	func _draw() -> void:
-		var side := minf(size.x, size.y) - PAD * 2.0
-		var rect := Rect2((size - Vector2(side, side)) * 0.5, Vector2(side, side))
+		var rect := FieldFrame.square(size, PAD)
 		draw_rect(rect, FILL)
 		draw_rect(rect, BORDER, false, 2.0)
-		_corner(Vector2(corner_min.x, corner_max.y), rect.position + Vector2(0, -6), false)
-		_corner(corner_max, Vector2(rect.end.x, rect.position.y - 6), true)
-		_corner(corner_min, Vector2(rect.position.x, rect.end.y + 16), false)
-		_corner(Vector2(corner_max.x, corner_min.y), Vector2(rect.end.x, rect.end.y + 16), true)
-
-	func _corner(value: Vector2, at: Vector2, right: bool) -> void:
-		var text := "%s, %s" % [_trim(value.x), _trim(value.y)]
-		var font := ThemeDB.fallback_font
-		if right:
-			at.x -= font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, LABEL_SIZE).x
-		draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, LABEL_SIZE, TEXT)
-
-	func _trim(value: float) -> String:
-		return "%d" % int(value) if is_equal_approx(value, roundf(value)) else "%0.1f" % value
+		FieldFrame.draw_corners(self, rect, corner_min, corner_max, PAD)
 
 
 var _min_x: SpinBox

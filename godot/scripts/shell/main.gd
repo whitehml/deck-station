@@ -1,41 +1,9 @@
 extends Control
 
-const PHASE_NAMES := {
-	RobotClient.Phase.DISCONNECTED: "—",
-	RobotClient.Phase.IDLE: "IDLE",
-	RobotClient.Phase.INIT: "INIT",
-	RobotClient.Phase.RUNNING: "RUNNING",
-}
-
-const MATCH_SECONDS := 120.0
-const ENDGAME_SECONDS := 30.0
-const SLOT_STATUS := {1: &"slot1", 2: &"slot2"}
-
 const PAGE_ORDER: Array[StringName] = [&"drive", &"graphs", &"field", &"opmodes", &"config"]
-
-## Settings-menu item ids, kept clear of the theme submenu's 0-based ids.
-const UPDATE_ID := 1000
-const QUIT_ID := 1001
-const CONTROLS_ID := 1002
-const DEVICE_FILTER_ID := 1003
-const FIELD_FORMAT_ID := 1004
-const FIELD_FRAME_ID := 1005
-const SETTINGS_PATH := "user://settings.cfg"
-const UPDATER := preload("res://scripts/settings/update/updater.gd")
-const CONTROLS_HELP := preload("res://scripts/settings/controls_help.gd")
-const FIELD_HELP := preload("res://scripts/pages/field/field_help.gd")
 
 var _current_page: StringName = &"drive"
 var _slot_radial_open := false
-var _theme_index := 0
-var _quit_dialog: ConfirmationDialog
-var _updater: Node
-var _controls_help: AcceptDialog
-var _field_help: AcceptDialog
-var _field_frame_dialog: FieldFrameDialog
-var _device_filter_dialog: DeviceFilterDialog
-var _clock_idle := false
-var _connected := false
 
 @onready var _pages := {
 	&"drive": %DrivePage,
@@ -57,20 +25,8 @@ var _connected := false
 func _ready() -> void:
 	for page_name in _tabs:
 		_tabs[page_name].pressed.connect(_show_page.bind(page_name))
-	%StopButton.pressed.connect(_on_action_pressed)
-	_size_action_button()
 
-	RobotClient.connection_changed.connect(_on_connection_changed)
 	RobotClient.phase_changed.connect(_on_phase_changed)
-	RobotClient.selected_opmode_changed.connect(_on_selected_opmode_changed)
-	RobotClient.battery_voltage_changed.connect(_on_battery_voltage)
-	RobotClient.opmode_error_changed.connect(_on_opmode_error_changed)
-	%ErrorDismiss.pressed.connect(RobotClient.clear_opmode_error)
-	_on_opmode_error_changed(RobotClient.opmode_error)
-	GamepadBridge.slot_changed.connect(_on_slot_changed)
-	GamepadBridge.claims_changed.connect(_on_claims_changed)
-	Input.joy_connection_changed.connect(_on_joy_connection_changed)
-	_update_slot_badge()
 
 	GripInput.grip_tap.connect(_on_grip_tap)
 	GripInput.grip_hold_started.connect(_on_grip_hold_started)
@@ -80,18 +36,15 @@ func _ready() -> void:
 	%OpModesPage.radial = %Radial
 	%GraphsPage.graph_keys_changed.connect(%DrivePage.set_graph_keys)
 	%GraphsPage.graph_window_changed.connect(%DrivePage.set_graph_window)
-	%FieldPage.format_help_requested.connect(_show_field_help)
-	%FieldPage.frame_requested.connect(_show_field_frame)
+	%FieldPage.format_help_requested.connect(%SettingsButton.show_field_help)
+	%FieldPage.frame_requested.connect(%SettingsButton.show_field_frame)
+	%SettingsButton.theme_selected.connect(_apply_theme)
 
-	_load_settings()
-	_setup_settings_menu()
-	_apply_theme(_theme_index)
+	_apply_theme(%SettingsButton.theme_index)
 	_show_page(&"drive")
-	_update_action()
 
 
 func _process(_delta: float) -> void:
-	_update_clock()
 	if not RobotClient.nav_active():
 		if not Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
 			var focus := get_viewport().gui_get_focus_owner()
@@ -157,108 +110,15 @@ func _cycle_page(dir: int) -> void:
 		target.grab_focus()
 
 
-## --- Settings menu  ---
-
-
-func _setup_settings_menu() -> void:
-	var popup: PopupMenu = %SettingsButton.get_popup()
-	var themes := PopupMenu.new()
-	themes.name = "ThemesMenu"
-	for i in AppThemes.THEMES.size():
-		themes.add_radio_check_item(AppThemes.spec(i)[&"name"], i)
-	themes.set_item_checked(_theme_index, true)
-	themes.id_pressed.connect(_select_theme)
-	popup.add_child(themes)
-	popup.add_submenu_item("Themes", "ThemesMenu")
-
-	popup.add_separator()
-	popup.add_item("Controls", CONTROLS_ID)
-	popup.add_item("Device Filter", DEVICE_FILTER_ID)
-	popup.add_item("Field Frame", FIELD_FRAME_ID)
-	popup.add_item("Field Telemetry Format", FIELD_FORMAT_ID)
-	popup.add_item("Check for Updates", UPDATE_ID)
-	popup.add_item("Quit", QUIT_ID)
-	popup.id_pressed.connect(_on_settings_id)
-
-	_controls_help = CONTROLS_HELP.new()
-	add_child(_controls_help)
-
-	_field_help = FIELD_HELP.new()
-	add_child(_field_help)
-
-	_field_frame_dialog = FieldFrameDialog.new()
-	add_child(_field_frame_dialog)
-
-	_device_filter_dialog = DeviceFilterDialog.new()
-	add_child(_device_filter_dialog)
-
-	_updater = UPDATER.new()
-	add_child(_updater)
-
-	_quit_dialog = ConfirmationDialog.new()
-	_quit_dialog.title = "Quit"
-	_quit_dialog.dialog_text = "Quit the Driver Station?"
-	_quit_dialog.ok_button_text = "Quit"
-	_quit_dialog.confirmed.connect(func() -> void: get_tree().quit())
-	add_child(_quit_dialog)
-
-
-func _on_settings_id(id: int) -> void:
-	if id == QUIT_ID:
-		_quit_dialog.popup_centered()
-	elif id == UPDATE_ID:
-		_updater.run()
-	elif id == CONTROLS_ID:
-		_controls_help.popup_centered_ratio(0.8)
-	elif id == DEVICE_FILTER_ID:
-		_device_filter_dialog.open()
-	elif id == FIELD_FORMAT_ID:
-		_show_field_help()
-	elif id == FIELD_FRAME_ID:
-		_show_field_frame()
-
-
-func _show_field_help() -> void:
-	_field_help.popup_centered_ratio(0.8)
-
-
-func _show_field_frame() -> void:
-	_field_frame_dialog.open()
-
-
-func _select_theme(index: int) -> void:
-	_theme_index = index
-	var themes: PopupMenu = %SettingsButton.get_popup().get_node("ThemesMenu")
-	for i in AppThemes.THEMES.size():
-		themes.set_item_checked(i, i == index)
-	_apply_theme(index)
-	_save_settings()
-
-
 func _apply_theme(index: int) -> void:
 	theme = AppThemes.for_index(index)
 	_background.color = AppThemes.background_color(index)
-	_refresh_status_tints()
+	%StatusBar.refresh_tints()
 
 
-func _load_settings() -> void:
-	var cfg := ConfigFile.new()
-	if cfg.load(SETTINGS_PATH) != OK:
-		return
-	_theme_index = clampi(int(cfg.get_value("ui", "theme", 0)), 0, AppThemes.THEMES.size() - 1)
-
-
-func _save_settings() -> void:
-	var cfg := ConfigFile.new()
-	cfg.load(SETTINGS_PATH)
-	cfg.set_value("ui", "theme", _theme_index)
-	cfg.save(SETTINGS_PATH)
-
-
-## Any claim change (Start+A/B, keyboard brackets, hot-plug re-resolve) lands
-## here to keep the badges in sync; GamepadBridge persists the claim itself.
-func _on_claims_changed() -> void:
-	_update_slot_badge()
+func _on_phase_changed(phase: int, _opmode_name: String) -> void:
+	if phase == RobotClient.Phase.RUNNING:
+		_show_page(&"drive")
 
 
 ## --- Grips ---
@@ -281,8 +141,8 @@ func _on_grip_hold_started(grip: StringName) -> void:
 		&"R4":
 			if GamepadBridge.is_text_focused():
 				return
-			if _controls_help.visible:
-				_controls_help.focus_page()
+			if %SettingsButton.controls_help_visible():
+				%SettingsButton.focus_controls_help()
 				return
 			var target := _first_focusable(_pages[_current_page])
 			if target:
@@ -335,126 +195,3 @@ func _first_focusable(node: Node) -> Control:
 		if found:
 			return found
 	return null
-
-
-## --- Status bar ---
-
-
-func _tint(label: Label, status: StringName) -> void:
-	label.add_theme_color_override("font_color", get_theme_color(status, ThemeTokens.STATUS_TYPE))
-
-
-func _untint(label: Label) -> void:
-	label.remove_theme_color_override("font_color")
-
-
-func _refresh_status_tints() -> void:
-	_on_connection_changed(_connected)
-	_update_slot_badge()
-	_clock_idle = false
-
-
-func _on_connection_changed(connected: bool) -> void:
-	_connected = connected
-	%ConnectionLabel.text = "CONNECTED" if connected else "DISCONNECTED"
-	_tint(%ConnectionLabel, &"connected" if connected else &"disconnected")
-
-
-func _on_phase_changed(phase: int, opmode_name: String) -> void:
-	_refresh_phase_label(phase, opmode_name)
-	if phase == RobotClient.Phase.RUNNING:
-		_show_page(&"drive")
-	_update_action()
-
-
-func _refresh_phase_label(phase: int, opmode_name: String) -> void:
-	var label: String = PHASE_NAMES.get(phase, "?")
-	var name := opmode_name if not opmode_name.is_empty() else RobotClient.selected_opmode
-	if not name.is_empty():
-		label += "  ·  " + name
-	%PhaseLabel.text = label
-
-
-func _on_action_pressed() -> void:
-	match RobotClient.phase:
-		RobotClient.Phase.IDLE:
-			RobotClient.init_opmode()
-		RobotClient.Phase.INIT:
-			RobotClient.start_opmode()
-		RobotClient.Phase.RUNNING:
-			RobotClient.stop_opmode()
-
-
-func _on_selected_opmode_changed(_opmode_name: String) -> void:
-	_refresh_phase_label(RobotClient.phase, "")
-	_update_action()
-
-
-func _update_action() -> void:
-	PhaseAction.apply(%StopButton, RobotClient.phase)
-
-
-func _size_action_button() -> void:
-	var btn: Button = %StopButton
-	var font := btn.get_theme_font(&"font")
-	var font_size := btn.get_theme_font_size(&"font_size")
-	var widest := 0.0
-	for label: String in PhaseAction.LABELS.values():
-		widest = maxf(
-			widest, font.get_string_size(label, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size).x
-		)
-	var style := btn.get_theme_stylebox(&"normal")
-	btn.custom_minimum_size.x = ceilf(
-		widest + style.get_margin(SIDE_LEFT) + style.get_margin(SIDE_RIGHT)
-	)
-
-
-func _on_slot_changed(_slot: int) -> void:
-	_update_slot_badge()
-
-
-func _on_joy_connection_changed(_device: int, _connected: bool) -> void:
-	_update_slot_badge()
-
-
-func _update_slot_badge() -> void:
-	%GP1Badge.text = "1:" + _slot_letter(1)
-	_tint(%GP1Badge, SLOT_STATUS[1])
-	%GP2Badge.text = "2:" + _slot_letter(2)
-	_tint(%GP2Badge, SLOT_STATUS[2])
-
-
-func _slot_letter(slot_n: int) -> String:
-	var device = GamepadBridge.device_for_slot(slot_n)
-	if GamepadBridge.is_unclaimed(device):
-		return "—"
-	if device == GamepadBridge.KEYBOARD_DEVICE_ID:
-		return "K"
-	if GamepadBridge.is_steam_deck() and device == GamepadBridge.deck_device():
-		return "D"
-	return "C"
-
-
-func _on_battery_voltage(volts: float) -> void:
-	%BatteryLabel.text = "%0.2f V" % volts
-
-
-func _on_opmode_error_changed(text: String) -> void:
-	%ErrorText.text = text
-	%ErrorBanner.visible = not text.is_empty()
-
-
-func _update_clock() -> void:
-	if RobotClient.phase != RobotClient.Phase.RUNNING:
-		if not _clock_idle:
-			%MatchClockLabel.text = "-:--"
-			_untint(%MatchClockLabel)
-			_clock_idle = true
-		return
-	_clock_idle = false
-	var remaining := maxf(0.0, MATCH_SECONDS - RobotClient.run_elapsed())
-	%MatchClockLabel.text = "%d:%04.1f" % [int(remaining) / 60, fmod(remaining, 60.0)]
-	if remaining <= ENDGAME_SECONDS:
-		_tint(%MatchClockLabel, &"endgame")
-	else:
-		_untint(%MatchClockLabel)

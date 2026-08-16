@@ -132,7 +132,7 @@ func _reference_page() -> Control:
 
 func _block(title_text: String, body: String, example: Control) -> Control:
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override(&"separation", ROW_SEPARATION)
+	box.add_theme_constant_override(&"separation", DocTable.ROW_SEPARATION)
 	box.add_child(_heading(title_text))
 	box.add_child(_paragraph(body))
 	if example:

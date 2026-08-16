@@ -51,8 +51,7 @@ func _rebuild_group_filter(opmodes: Array) -> void:
 		var g := _group_of(opmode)
 		if not g.is_empty():
 			groups[g] = true
-	var names := groups.keys()
-	names.sort()
+	var names := DisplayOrder.sorted(groups.keys())
 	if not names.has(_group_filter):
 		_group_filter = ""
 	%GroupFilter.clear()

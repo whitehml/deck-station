@@ -4,6 +4,7 @@ signal changed
 
 const FILE_NAME := "device_filter.json"
 const FALLBACK_DIR := "user://"
+const SOURCE_DIR := "res://../packaging"
 
 var _hidden := {}
 var _path := ""
@@ -24,9 +25,7 @@ func is_hidden(tag: String) -> bool:
 
 
 func hidden_tags() -> Array:
-	var tags := _hidden.keys()
-	tags.sort_custom(func(a: String, b: String) -> bool: return a.naturalnocasecmp_to(b) < 0)
-	return tags
+	return DisplayOrder.sorted(_hidden.keys())
 
 
 func visible(catalog: Array) -> Array:
@@ -43,7 +42,12 @@ func set_hidden_tags(tags: Array) -> void:
 
 func _resolve_path() -> String:
 	var root := InstallPaths.root()
-	return root.path_join(FILE_NAME) if not root.is_empty() else FALLBACK_DIR + FILE_NAME
+	if not root.is_empty():
+		return root.path_join(FILE_NAME)
+	var source := ProjectSettings.globalize_path(SOURCE_DIR).path_join(FILE_NAME).simplify_path()
+	if OS.has_feature("editor") and FileAccess.file_exists(source):
+		return source
+	return FALLBACK_DIR + FILE_NAME
 
 
 func _read() -> Dictionary:
@@ -57,7 +61,8 @@ func _read() -> Dictionary:
 		push_warning("Device filter: malformed %s" % _path)
 		return tags
 	for tag: Variant in parsed["hidden"]:
-		tags[str(tag)] = true
+		if not DeviceCatalog.is_structural(str(tag)):
+			tags[str(tag)] = true
 	return tags
 
 

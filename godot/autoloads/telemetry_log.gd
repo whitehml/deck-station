@@ -32,9 +32,7 @@ func _ready() -> void:
 
 
 func keys() -> Array:
-	var out := _series.keys()
-	out.sort()
-	return out
+	return DisplayOrder.sorted(_series.keys())
 
 
 func series(key: String) -> TelemetrySeries:

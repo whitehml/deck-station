@@ -48,7 +48,7 @@ func _build() -> void:
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	hint.custom_minimum_size.x = LIST_SIZE.x * 2
 	hint.text = (
-		"Hidden types stay available under Add device ▸ Custom tag….\nSaved to %s"
+		"Hidden types stay available under Add device ▸ Custom tag.\nSaved to %s"
 		% DeviceFilter.path()
 	)
 	root.add_child(hint)
@@ -130,9 +130,7 @@ func _sort(list: ItemList) -> void:
 	var rows: Array = []
 	for i in list.item_count:
 		rows.append({"tag": str(list.get_item_metadata(i)), "label": list.get_item_text(i)})
-	rows.sort_custom(
-		func(a: Dictionary, b: Dictionary) -> bool: return a.label.naturalnocasecmp_to(b.label) < 0
-	)
+	DisplayOrder.sorted_by(rows, "label")
 	list.clear()
 	for row: Dictionary in rows:
 		_add_row(list, row.tag, row.label)

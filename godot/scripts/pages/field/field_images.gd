@@ -1,10 +1,9 @@
 class_name FieldImages
 
 const FIELDS := [
-	{"name": "2025-26 DECODE", "path": "res://assets/fields/decode.png"},
-	{"name": "2024-25 INTO THE DEEP", "path": "res://assets/fields/into_the_deep.png"},
-	{"name": "2023-24 CENTERSTAGE", "path": "res://assets/fields/centerstage.png"},
-	{"name": "2022-23 POWERPLAY", "path": "res://assets/fields/powerplay.png"},
+	{"name": "2025-26 DECODE", "path": "res://assets/fields/decode.webp"},
+	{"name": "2024-25 INTO THE DEEP", "path": "res://assets/fields/into_the_deep.webp"},
+	{"name": "Field (no game elements)", "path": "res://assets/fields/base.webp"},
 ]
 
 

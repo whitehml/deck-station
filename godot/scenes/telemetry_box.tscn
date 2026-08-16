@@ -1,7 +1,7 @@
 [gd_scene load_steps=3 format=3]
 
 [ext_resource type="StyleBoxFlat" path="res://themes/pane_box.tres" id="1"]
-[ext_resource type="Script" path="res://scripts/telemetry_box.gd" id="2"]
+[ext_resource type="Script" path="res://scripts/panes/telemetry_box.gd" id="2"]
 
 [node name="Box" type="PanelContainer"]
 theme_override_styles/panel = ExtResource("1")

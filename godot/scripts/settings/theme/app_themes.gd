@@ -63,6 +63,7 @@ const DEFAULT_RADIAL_COLORS := {
 
 ## Every theme lives here and nowhere else. A theme is `accent` + `bg` (panels
 ## and button fills) + `text`; drop `text` and it is filled in by the two-color
+## rule in `ThemeBuilder`. `backdrop` is the root fill behind the panels and
 ## rule in `_text_color()`. `backdrop` is the root fill behind the panels and
 ## defaults to `bg`; `pattern` swaps the top bar for a tiled polka-dot fill.
 ## The entry with no `accent` is Godot's own theme, left alone.

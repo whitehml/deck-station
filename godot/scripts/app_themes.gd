@@ -172,6 +172,7 @@ static func _contrast(a: Color, b: Color) -> float:
 	var lb := _luminance(b)
 	return (maxf(la, lb) + 0.05) / (minf(la, lb) + 0.05)
 
+
 static func _fit(color: Color, bg: Color, target := AA_TEXT) -> Color:
 	if _contrast(color, bg) >= target:
 		return color
@@ -189,11 +190,13 @@ static func _fitted_status(bg: Color) -> Dictionary:
 		fitted[name] = _fit(STATUS_COLORS[name], bg)
 	return fitted
 
+
 static func _ink(accent: Color, bg: Color, text: Color) -> Color:
 	if _contrast(accent, bg) >= AA_TEXT:
 		return accent
 	var fitted := _fit(accent, bg)
 	return fitted if _contrast(fitted, accent) <= HUE_DRIFT else text
+
 
 static func _on_accent(accent: Color, bg: Color) -> Color:
 	if _contrast(bg, accent) >= AA_TEXT:
@@ -226,6 +229,7 @@ static func _register_bar_types(theme: Theme) -> void:
 	theme.set_stylebox("panel", STATUSBAR_CARD_TYPE, StyleBoxEmpty.new())
 	for type: StringName in BAR_BUTTON_TYPES:
 		theme.set_type_variation(type, BAR_BUTTON_TYPES[type])
+
 
 static func _style_buttons(
 	theme: Theme, types: Array, accent: Color, bg: Color, text: Color, dim: Color, highlight: Color

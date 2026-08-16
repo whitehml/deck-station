@@ -47,6 +47,7 @@ func clear() -> void:
 func unix_time(t: float) -> float:
 	return _t0_unix + t
 
+
 func snapshot() -> Array:
 	var out: Array = []
 	for key in _series:
@@ -111,6 +112,7 @@ func _parse_text(text: String) -> Array:
 	if m == null:
 		return []
 	return [float(m.get_string(1)), m.get_string(2).strip_edges()]
+
 
 func _parse_caption(text: String) -> Array:
 	var idx := text.rfind(":")

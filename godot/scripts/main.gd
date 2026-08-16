@@ -309,6 +309,7 @@ func _first_focusable(node: Node) -> Control:
 
 ## --- Status bar ---
 
+
 func _tint(label: Label, status: StringName) -> void:
 	label.add_theme_color_override("font_color", get_theme_color(status, AppThemes.STATUS_TYPE))
 

@@ -1,10 +1,10 @@
 [gd_scene load_steps=6 format=3]
 
-[ext_resource type="Script" path="res://scripts/drive_page.gd" id="1"]
-[ext_resource type="Script" path="res://scripts/graph.gd" id="2"]
+[ext_resource type="Script" path="res://scripts/pages/drive/drive_page.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/panes/graph.gd" id="2"]
 [ext_resource type="StyleBoxFlat" path="res://themes/pane_box.tres" id="3"]
 [ext_resource type="PackedScene" path="res://scenes/telemetry_box.tscn" id="4"]
-[ext_resource type="Script" path="res://scripts/field_view.gd" id="5"]
+[ext_resource type="Script" path="res://scripts/panes/field_view.gd" id="5"]
 
 [node name="DrivePage" type="HBoxContainer"]
 anchors_preset = 15

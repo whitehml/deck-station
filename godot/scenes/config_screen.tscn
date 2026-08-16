@@ -1,6 +1,6 @@
 [gd_scene load_steps=3 format=3]
 
-[ext_resource type="Script" path="res://scripts/config_screen.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/pages/config/config_screen.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/config_editor.tscn" id="2"]
 
 [node name="Config" type="HSplitContainer"]

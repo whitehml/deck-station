@@ -21,9 +21,9 @@ const DEVICE_FILTER_ID := 1003
 const FIELD_FORMAT_ID := 1004
 const FIELD_FRAME_ID := 1005
 const SETTINGS_PATH := "user://settings.cfg"
-const UPDATER := preload("res://scripts/updater.gd")
-const CONTROLS_HELP := preload("res://scripts/controls_help.gd")
-const FIELD_HELP := preload("res://scripts/field_help.gd")
+const UPDATER := preload("res://scripts/settings/update/updater.gd")
+const CONTROLS_HELP := preload("res://scripts/settings/controls_help.gd")
+const FIELD_HELP := preload("res://scripts/pages/field/field_help.gd")
 
 var _current_page: StringName = &"drive"
 var _slot_radial_open := false

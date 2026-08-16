@@ -1,11 +1,11 @@
 [gd_scene load_steps=10 format=3]
 
-[ext_resource type="Script" path="res://scripts/main.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/shell/main.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/drive_page.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://scenes/graphs_screen.tscn" id="3"]
 [ext_resource type="PackedScene" path="res://scenes/opmodes_page.tscn" id="4"]
 [ext_resource type="PackedScene" path="res://scenes/config_screen.tscn" id="5"]
-[ext_resource type="Script" path="res://scripts/radial_menu.gd" id="6"]
+[ext_resource type="Script" path="res://scripts/widgets/radial_menu.gd" id="6"]
 [ext_resource type="PackedScene" path="res://scenes/field_screen.tscn" id="7"]
 
 [sub_resource type="ButtonGroup" id="ButtonGroup_tabs"]

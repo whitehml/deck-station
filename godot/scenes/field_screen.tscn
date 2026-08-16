@@ -1,7 +1,7 @@
 [gd_scene load_steps=4 format=3]
 
-[ext_resource type="Script" path="res://scripts/field_screen.gd" id="1"]
-[ext_resource type="Script" path="res://scripts/field_view.gd" id="2"]
+[ext_resource type="Script" path="res://scripts/pages/field/field_screen.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/panes/field_view.gd" id="2"]
 [ext_resource type="StyleBoxFlat" path="res://themes/pane_box.tres" id="3"]
 
 [node name="Field" type="VBoxContainer"]

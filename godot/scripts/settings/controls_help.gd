@@ -5,7 +5,7 @@ extends DocDialog
 
 enum { ANY, DECK, DESKTOP }
 
-const KeyboardMap := preload("res://scripts/keyboard_map.gd")
+const KeyboardMap := preload("res://scripts/settings/keyboard_map.gd")
 
 ## Braced text is the Deck's grip name for the same key — dropped off the Deck.
 const DRIVER_STATION := [

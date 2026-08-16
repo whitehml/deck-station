@@ -29,6 +29,8 @@ func _ready() -> void:
 	print("SMOKE run_elapsed: ", RobotClient.run_elapsed())
 	assert(RobotClient.run_elapsed() > 0.5)
 
+	await _smoke_field()
+
 	RobotClient.stop_opmode()
 	while RobotClient.phase != RobotClient.Phase.IDLE:
 		await RobotClient.phase_changed
@@ -159,6 +161,26 @@ func _smoke_config_crud() -> void:
 		)
 	)
 	print("SMOKE config CRUD OK")
+
+
+func _smoke_field() -> void:
+	var classes := FieldLog.class_names()
+	print("SMOKE field classes: ", classes)
+	assert(classes.has("Robot") and classes.has("Game Pieces"))
+
+	var kinds := FieldLog.items().map(func(i: Dictionary) -> String: return i["kind"])
+	print("SMOKE field kinds: ", kinds)
+	for kind in FieldLog.KINDS:
+		assert(kinds.has(kind))
+
+	var multiple := FieldLog.items().filter(
+		func(i: Dictionary) -> bool: return i["cls"] == "Game Pieces"
+	)
+	assert(multiple.size() > 1)
+
+	var entries: Array = await RobotClient.telemetry_received
+	assert(not RobotClient.format_telemetry(entries).contains(FieldLog.MARKER))
+	print("SMOKE field lines hidden from telemetry text")
 
 
 func _smoke_battery_voltage() -> void:

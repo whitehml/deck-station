@@ -165,6 +165,8 @@ func format_telemetry(entries: Array) -> String:
 			if show_system_telemetry:
 				system.append("[color=yellow]%s[/color]" % e.key)
 			continue
+		if str(e.key).strip_edges().begins_with(FieldLog.MARKER):
+			continue
 		lines.append(e.key if str(e.value).is_empty() else "%s: %s" % [e.key, e.value])
 	return "\n".join(system + lines)
 

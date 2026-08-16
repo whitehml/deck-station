@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/drive_page.tscn" id="2"]
@@ -6,6 +6,7 @@
 [ext_resource type="PackedScene" path="res://scenes/opmodes_page.tscn" id="4"]
 [ext_resource type="PackedScene" path="res://scenes/config_screen.tscn" id="5"]
 [ext_resource type="Script" path="res://scripts/radial_menu.gd" id="6"]
+[ext_resource type="PackedScene" path="res://scenes/field_screen.tscn" id="7"]
 
 [sub_resource type="ButtonGroup" id="ButtonGroup_tabs"]
 
@@ -121,6 +122,14 @@ toggle_mode = true
 button_group = SubResource("ButtonGroup_tabs")
 text = "Graphs"
 
+[node name="FieldTab" type="Button" parent="Layout/StatusBar/StatusRow"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"StatusBarButton"
+toggle_mode = true
+button_group = SubResource("ButtonGroup_tabs")
+text = "Field"
+
 [node name="OpModesTab" type="Button" parent="Layout/StatusBar/StatusRow"]
 unique_name_in_owner = true
 layout_mode = 2
@@ -181,6 +190,10 @@ size_flags_vertical = 3
 unique_name_in_owner = true
 
 [node name="GraphsPage" parent="Layout/Pages" instance=ExtResource("3")]
+unique_name_in_owner = true
+visible = false
+
+[node name="FieldPage" parent="Layout/Pages" instance=ExtResource("7")]
 unique_name_in_owner = true
 visible = false
 

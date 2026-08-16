@@ -23,6 +23,7 @@ GripInput="*res://autoloads/grip_input.gd"
 RobotClient="*res://autoloads/robot_client.gd"
 DeviceFilter="*res://autoloads/device_filter.gd"
 TelemetryLog="*res://autoloads/telemetry_log.gd"
+FieldLog="*res://autoloads/field_log.gd"
 
 [display]
 

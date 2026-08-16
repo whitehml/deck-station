@@ -11,16 +11,19 @@ const MATCH_SECONDS := 120.0
 const ENDGAME_SECONDS := 30.0
 const SLOT_STATUS := {1: &"slot1", 2: &"slot2"}
 
-const PAGE_ORDER: Array[StringName] = [&"drive", &"graphs", &"opmodes", &"config"]
+const PAGE_ORDER: Array[StringName] = [&"drive", &"graphs", &"field", &"opmodes", &"config"]
 
 ## Settings-menu item ids, kept clear of the theme submenu's 0-based ids.
 const UPDATE_ID := 1000
 const QUIT_ID := 1001
 const CONTROLS_ID := 1002
 const DEVICE_FILTER_ID := 1003
+const FIELD_FORMAT_ID := 1004
+const FIELD_FRAME_ID := 1005
 const SETTINGS_PATH := "user://settings.cfg"
 const UPDATER := preload("res://scripts/updater.gd")
 const CONTROLS_HELP := preload("res://scripts/controls_help.gd")
+const FIELD_HELP := preload("res://scripts/field_help.gd")
 
 var _current_page: StringName = &"drive"
 var _slot_radial_open := false
@@ -28,6 +31,8 @@ var _theme_index := 0
 var _quit_dialog: ConfirmationDialog
 var _updater: Node
 var _controls_help: AcceptDialog
+var _field_help: AcceptDialog
+var _field_frame_dialog: FieldFrameDialog
 var _device_filter_dialog: DeviceFilterDialog
 var _clock_idle := false
 var _connected := false
@@ -35,12 +40,14 @@ var _connected := false
 @onready var _pages := {
 	&"drive": %DrivePage,
 	&"graphs": %GraphsPage,
+	&"field": %FieldPage,
 	&"opmodes": %OpModesPage,
 	&"config": %ConfigPage,
 }
 @onready var _tabs := {
 	&"drive": %DriveTab,
 	&"graphs": %GraphsTab,
+	&"field": %FieldTab,
 	&"opmodes": %OpModesTab,
 	&"config": %ConfigTab,
 }
@@ -73,6 +80,8 @@ func _ready() -> void:
 	%OpModesPage.radial = %Radial
 	%GraphsPage.graph_keys_changed.connect(%DrivePage.set_graph_keys)
 	%GraphsPage.graph_window_changed.connect(%DrivePage.set_graph_window)
+	%FieldPage.format_help_requested.connect(_show_field_help)
+	%FieldPage.frame_requested.connect(_show_field_frame)
 
 	_load_settings()
 	_setup_settings_menu()
@@ -165,12 +174,20 @@ func _setup_settings_menu() -> void:
 	popup.add_separator()
 	popup.add_item("Controls", CONTROLS_ID)
 	popup.add_item("Device Filter", DEVICE_FILTER_ID)
+	popup.add_item("Field Frame", FIELD_FRAME_ID)
+	popup.add_item("Field Telemetry Format", FIELD_FORMAT_ID)
 	popup.add_item("Check for Updates", UPDATE_ID)
 	popup.add_item("Quit", QUIT_ID)
 	popup.id_pressed.connect(_on_settings_id)
 
 	_controls_help = CONTROLS_HELP.new()
 	add_child(_controls_help)
+
+	_field_help = FIELD_HELP.new()
+	add_child(_field_help)
+
+	_field_frame_dialog = FieldFrameDialog.new()
+	add_child(_field_frame_dialog)
 
 	_device_filter_dialog = DeviceFilterDialog.new()
 	add_child(_device_filter_dialog)
@@ -195,6 +212,18 @@ func _on_settings_id(id: int) -> void:
 		_controls_help.popup_centered_ratio(0.8)
 	elif id == DEVICE_FILTER_ID:
 		_device_filter_dialog.open()
+	elif id == FIELD_FORMAT_ID:
+		_show_field_help()
+	elif id == FIELD_FRAME_ID:
+		_show_field_frame()
+
+
+func _show_field_help() -> void:
+	_field_help.popup_centered_ratio(0.8)
+
+
+func _show_field_frame() -> void:
+	_field_frame_dialog.open()
 
 
 func _select_theme(index: int) -> void:
@@ -221,6 +250,7 @@ func _load_settings() -> void:
 
 func _save_settings() -> void:
 	var cfg := ConfigFile.new()
+	cfg.load(SETTINGS_PATH)
 	cfg.set_value("ui", "theme", _theme_index)
 	cfg.save(SETTINGS_PATH)
 

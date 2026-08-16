@@ -1,8 +1,8 @@
 extends HBoxContainer
 
-enum Source { WEBCAM, LIMELIGHT, GRAPHS, TELEMETRY }
+enum Source { WEBCAM, LIMELIGHT, GRAPHS, FIELD, TELEMETRY }
 
-const SOURCE_NAMES := ["Webcam", "Limelight", "Graphs", "Telemetry"]
+const SOURCE_NAMES := ["Webcam", "Limelight", "Graphs", "Field", "Telemetry"]
 const CAM_FEEDS := {Source.WEBCAM: "webcam", Source.LIMELIGHT: "limelight"}
 
 var radial: Control
@@ -17,6 +17,7 @@ var _cam_textures := {}  # feed name -> Texture2D
 
 var _cam: Array = []
 var _graph: Array = []
+var _field: Array = []
 var _telem: Array = []
 var _graph_view: Array = []
 var _telem_box: Array = []
@@ -29,6 +30,7 @@ func _ready() -> void:
 	for slot: Control in _slots:
 		_cam.append(slot.get_node("Cam"))
 		_graph.append(slot.get_node("Graph"))
+		_field.append(slot.get_node("Field"))
 		_telem.append(slot.get_node("Telem"))
 		_graph_view.append(slot.get_node("Graph/Box/View"))
 		_telem_box.append(slot.get_node("Telem/Box"))
@@ -97,6 +99,7 @@ func _apply_source(slot: int, source: int) -> void:
 	var cam: TextureRect = _cam[slot]
 	cam.visible = CAM_FEEDS.has(source)
 	_graph[slot].visible = source == Source.GRAPHS
+	_field[slot].visible = source == Source.FIELD
 	_telem[slot].visible = source == Source.TELEMETRY
 
 	var header: String = SOURCE_NAMES[source]

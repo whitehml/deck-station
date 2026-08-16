@@ -71,7 +71,7 @@ func _refresh_list() -> void:
 		var status := _row_status(meta)
 		if status != &"":
 			row.add_theme_color_override(
-				"font_color", row.get_theme_color(status, AppThemes.STATUS_TYPE)
+				"font_color", row.get_theme_color(status, ThemeTokens.STATUS_TYPE)
 			)
 
 

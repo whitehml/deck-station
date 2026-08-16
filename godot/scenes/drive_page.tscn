@@ -1,9 +1,10 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/drive_page.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/graph.gd" id="2"]
 [ext_resource type="StyleBoxFlat" path="res://themes/pane_box.tres" id="3"]
 [ext_resource type="PackedScene" path="res://scenes/telemetry_box.tscn" id="4"]
+[ext_resource type="Script" path="res://scripts/field_view.gd" id="5"]
 
 [node name="DrivePage" type="HBoxContainer"]
 anchors_preset = 15
@@ -46,6 +47,24 @@ theme_override_styles/panel = ExtResource("3")
 layout_mode = 2
 size_flags_vertical = 3
 script = ExtResource("2")
+
+[node name="Field" type="MarginContainer" parent="SlotA"]
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="Box" type="PanelContainer" parent="SlotA/Field"]
+layout_mode = 2
+theme_override_styles/panel = ExtResource("3")
+
+[node name="View" type="Control" parent="SlotA/Field/Box"]
+layout_mode = 2
+size_flags_vertical = 3
+script = ExtResource("5")
 
 [node name="Telem" type="MarginContainer" parent="SlotA"]
 visible = false
@@ -92,6 +111,24 @@ theme_override_styles/panel = ExtResource("3")
 layout_mode = 2
 size_flags_vertical = 3
 script = ExtResource("2")
+
+[node name="Field" type="MarginContainer" parent="SlotB"]
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="Box" type="PanelContainer" parent="SlotB/Field"]
+layout_mode = 2
+theme_override_styles/panel = ExtResource("3")
+
+[node name="View" type="Control" parent="SlotB/Field/Box"]
+layout_mode = 2
+size_flags_vertical = 3
+script = ExtResource("5")
 
 [node name="Telem" type="MarginContainer" parent="SlotB"]
 layout_mode = 2

@@ -79,8 +79,18 @@ func is_steam_deck() -> bool:
 
 
 func is_text_focused() -> bool:
-	var focus := get_viewport().gui_get_focus_owner()
-	return focus is LineEdit or focus is TextEdit
+	return _text_focused_in(get_tree().root)
+
+
+func _text_focused_in(node: Node) -> bool:
+	if node is Window:
+		var focus := (node as Window).gui_get_focus_owner()
+		if focus is LineEdit or focus is TextEdit:
+			return true
+	for child in node.get_children():
+		if _text_focused_in(child):
+			return true
+	return false
 
 
 func swap_slot() -> void:

@@ -2,18 +2,40 @@ class_name ConfigEditor
 extends VBoxContainer
 
 signal saved(meta: Dictionary, active_out_of_date: bool)
-signal activated
+signal activated(meta: Dictionary)
 
 enum CustomDialogMode { RENAME, CUSTOM_TAG }
 
 const CUSTOM_ID := 999999
 
-const TAG_LYNX_USB_DEVICE := "LynxUsbDevice"
-const TAG_LYNX_MODULE := "LynxModule"
-const TAG_WEBCAM := "Webcam"
-const TAG_ETHERNET_DEVICE := "EthernetDevice"
+const TAG_LYNX_USB_DEVICE := DeviceCatalog.TAG_LYNX_USB_DEVICE
+const TAG_LYNX_MODULE := DeviceCatalog.TAG_LYNX_MODULE
+const TAG_WEBCAM := DeviceCatalog.TAG_WEBCAM
+const TAG_ETHERNET_DEVICE := DeviceCatalog.TAG_ETHERNET_DEVICE
+
+const ADD_CAMERA_TOOLTIP := "Use Scan to find an attached camera; manual entry is for advanced use."
+
+const SCAN_TYPE_TAGS := {
+	"WEBCAM": TAG_WEBCAM,
+	"ETHERNET_DEVICE": TAG_ETHERNET_DEVICE,
+}
+
+const SCAN_TYPE_LABELS := {
+	"WEBCAM": "Webcam",
+	"ETHERNET_DEVICE": "Ethernet / Limelight",
+	"LYNX_USB_DEVICE": "Control / Expansion Hub",
+}
+
+const SCAN_LIST_MIN := Vector2(560, 320)
+const SCAN_ROW_SEPARATION := 12
+const SCAN_ROW_GAP := 16
+const SCAN_SUBTLE_ALPHA := 0.7
+
+const XML_TAG_PATTERN := "^[A-Za-z_:][A-Za-z_:0-9\\-.]*$"
+const XML_TAG_HINT := "Start with a letter, _ or :, then letters, digits, _ : - or ."
 
 var _catalog: Array = []
+var _flavors := {}
 var _picker_entries: Array = []
 var _config: RobotConfig = null  # working (edited) model
 var _meta: Dictionary = {}  # meta of the loaded config
@@ -25,11 +47,13 @@ var _saveas_edit: LineEdit
 var _custom_dialog: ConfirmationDialog
 var _custom_dialog_mode: CustomDialogMode = CustomDialogMode.RENAME
 var _custom_edit: LineEdit
+var _custom_hint: Label
 var _activate_dialog: ConfirmationDialog
 var _reactivate_dialog: ConfirmationDialog
 var _scan_dialog: AcceptDialog
 var _scan_list: VBoxContainer
 var _add_device_popup: PopupMenu
+var _tag_regex := RegEx.create_from_string(XML_TAG_PATTERN)
 
 
 func _ready() -> void:
@@ -104,10 +128,14 @@ func _refresh_editor() -> void:
 		else:
 			_build_peripheral_row(%EditorTree, node)
 	var add_row := HBoxContainer.new()
-	add_row.add_child(_text_button("+ Webcam", _add_peripheral.bind(TAG_WEBCAM)))
-	add_row.add_child(
-		_text_button("+ Ethernet / Limelight", _add_peripheral.bind(TAG_ETHERNET_DEVICE))
+	var add_webcam := _text_button("+ Webcam", _add_peripheral.bind(TAG_WEBCAM))
+	add_webcam.tooltip_text = ADD_CAMERA_TOOLTIP
+	add_row.add_child(add_webcam)
+	var add_ethernet := _text_button(
+		"+ Ethernet / Limelight", _add_peripheral.bind(TAG_ETHERNET_DEVICE)
 	)
+	add_ethernet.tooltip_text = ADD_CAMERA_TOOLTIP
+	add_row.add_child(add_ethernet)
 	%EditorTree.add_child(add_row)
 
 
@@ -146,10 +174,10 @@ func _build_device_row(module: Dictionary, dev: Dictionary) -> void:
 	row.add_child(kind)
 	row.add_child(_attr_line_edit(dev, "name"))
 	row.add_child(_port_label("port"))
-	row.add_child(_attr_spin(dev, "port"))
+	row.add_child(_attr_options(dev, "port", _port_count(dev.tag)))
 	if dev.attrs.has("bus"):
 		row.add_child(_port_label("bus"))
-		row.add_child(_attr_spin(dev, "bus"))
+		row.add_child(_attr_options(dev, "bus", DeviceCatalog.BUS_COUNT))
 	row.add_child(_delete_button(_delete_child.bind(module, dev)))
 	%EditorTree.add_child(row)
 
@@ -161,6 +189,12 @@ func _build_peripheral_row(parent: Node, dev: Dictionary) -> void:
 	kind.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(kind)
 	row.add_child(_attr_line_edit(dev, "name"))
+	if dev.tag == TAG_WEBCAM:
+		row.add_child(_port_label("serial"))
+		var serial := _attr_line_edit(dev, "serialNumber")
+		serial.placeholder_text = "USB serial"
+		serial.tooltip_text = ADD_CAMERA_TOOLTIP
+		row.add_child(serial)
 	if dev.attrs.has("ipAddress"):
 		row.add_child(_port_label("ip"))
 		row.add_child(_attr_line_edit(dev, "ipAddress"))
@@ -179,13 +213,19 @@ func _attr_line_edit(node: Dictionary, key: String) -> LineEdit:
 	return edit
 
 
-func _attr_spin(node: Dictionary, key: String) -> SpinBox:
-	var spin := SpinBox.new()
-	spin.min_value = -1
-	spin.max_value = 25
-	spin.value = int(str(node.attrs.get(key, "0")))
-	spin.value_changed.connect(_on_attr_value.bind(node, key))
-	return spin
+func _attr_options(node: Dictionary, key: String, count: int) -> PortWheel:
+	var current := int(str(node.attrs.get(key, "0")))
+	var values: Array[int] = []
+	for i in count:
+		values.append(i)
+	if not values.has(current):
+		values.append(current)
+		values.sort()
+	var wheel := PortWheel.new()
+	wheel.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	wheel.setup(values, current)
+	wheel.value_changed.connect(_on_attr_option.bind(node, key))
+	return wheel
 
 
 func _port_label(text: String) -> Label:
@@ -216,8 +256,8 @@ func _on_attr_text(text: String, node: Dictionary, key: String) -> void:
 	_on_edited()
 
 
-func _on_attr_value(value: float, node: Dictionary, key: String) -> void:
-	node.attrs[key] = str(int(value))
+func _on_attr_option(value: int, node: Dictionary, key: String) -> void:
+	node.attrs[key] = str(value)
 	_on_edited()
 
 
@@ -238,17 +278,28 @@ func _add_hub(usb: Dictionary) -> void:
 	_refresh_editor()
 
 
-func _add_peripheral(tag: String) -> void:
+func _add_peripheral(tag: String, serial := "") -> void:
 	var attrs := {}
 	match tag:
 		TAG_WEBCAM:
-			attrs = {"name": _unique_name("Webcam 1"), "serialNumber": ""}
+			attrs = {"name": _unique_name("Webcam 1"), "serialNumber": serial}
 		TAG_ETHERNET_DEVICE:
 			attrs = {
-				"name": _unique_name("limelight"), "serialNumber": "", "port": "-1", "ipAddress": ""
+				"name": _unique_name("limelight"),
+				"serialNumber": serial,
+				"port": "0",
+				"ipAddress": _ethernet_ip(serial)
 			}
 	_config.root.children.append(RobotConfig.element(tag, attrs))
 	_refresh_editor()
+
+
+func _ethernet_ip(serial: String) -> String:
+	var octets := serial.get_slice(":", serial.get_slice_count(":") - 1).split(".")
+	if octets.size() != 4:
+		return ""
+	octets[3] = "1"
+	return ".".join(octets)
 
 
 func _rename_node(node: Dictionary) -> void:
@@ -256,6 +307,7 @@ func _rename_node(node: Dictionary) -> void:
 	_custom_edit.text = str(node.attrs.get("name", ""))
 	_custom_dialog.title = "Rename"
 	_custom_dialog_mode = CustomDialogMode.RENAME
+	_validate_custom(_custom_edit.text)
 	_custom_dialog.popup_centered()
 
 
@@ -269,7 +321,7 @@ func _open_add_device(module: Dictionary) -> void:
 		_add_device_popup.add_item(_picker_entries[i].label, i)
 	if not _picker_entries.is_empty():
 		_add_device_popup.add_separator()
-	_add_device_popup.add_item("Custom tag…", CUSTOM_ID)
+	_add_device_popup.add_item("Custom tag", CUSTOM_ID)
 	_add_device_popup.reset_size()
 	_add_device_popup.position = DisplayServer.mouse_get_position()
 	_add_device_popup.popup()
@@ -282,6 +334,7 @@ func _on_add_device_id(id: int) -> void:
 		_custom_edit.text = ""
 		_custom_dialog.title = "Custom device tag"
 		_custom_dialog_mode = CustomDialogMode.CUSTOM_TAG
+		_validate_custom(_custom_edit.text)
 		_custom_dialog.popup_centered()
 		return
 	var entry: Dictionary = _picker_entries[id]
@@ -289,7 +342,7 @@ func _on_add_device_id(id: int) -> void:
 
 
 func _append_device(module: Dictionary, tag: String, needs_bus: bool) -> void:
-	var attrs := {"name": _unique_name("new_device"), "port": str(_next_port(module))}
+	var attrs := {"name": _unique_name("new_device"), "port": str(_next_port(module, tag))}
 	if needs_bus:
 		attrs["bus"] = "0"
 	module.children.append(RobotConfig.element(tag, attrs))
@@ -298,7 +351,7 @@ func _append_device(module: Dictionary, tag: String, needs_bus: bool) -> void:
 
 func _on_custom_confirmed() -> void:
 	var text := _custom_edit.text.strip_edges()
-	if text.is_empty() or _add_device_target.is_empty():
+	if not _custom_error(text).is_empty() or _add_device_target.is_empty():
 		return
 	if _custom_dialog_mode == CustomDialogMode.RENAME:
 		_add_device_target.attrs["name"] = text
@@ -307,11 +360,38 @@ func _on_custom_confirmed() -> void:
 		_append_device(_add_device_target, text, false)
 
 
-func _next_port(module: Dictionary) -> int:
-	var highest := -1
+func _custom_error(text: String) -> String:
+	if text.strip_edges().is_empty():
+		return " "
+	if _custom_dialog_mode == CustomDialogMode.CUSTOM_TAG:
+		var tag := text.strip_edges()
+		if DeviceCatalog.is_structural(tag):
+			return "%s is a container, not a device on a hub port." % tag
+		if _tag_regex.search(tag) == null:
+			return "The RC will reject this tag. %s" % XML_TAG_HINT
+	return ""
+
+
+func _validate_custom(text: String) -> void:
+	var error := _custom_error(text)
+	_custom_hint.text = error
+	_custom_dialog.get_ok_button().disabled = not error.is_empty()
+
+
+func _port_count(tag: String) -> int:
+	return DeviceCatalog.port_count(str(_flavors.get(tag, "")))
+
+
+func _next_port(module: Dictionary, tag: String) -> int:
+	var flavor: String = str(_flavors.get(tag, ""))
+	var used := {}
 	for dev: Dictionary in module.children:
-		highest = maxi(highest, int(str(dev.attrs.get("port", "-1"))))
-	return highest + 1
+		if str(_flavors.get(dev.tag, "")) == flavor:
+			used[int(str(dev.attrs.get("port", "-1")))] = true
+	for port in DeviceCatalog.port_count(flavor):
+		if not used.has(port):
+			return port
+	return 0
 
 
 func _unique_name(base: String) -> String:
@@ -339,39 +419,81 @@ func _on_scan() -> void:
 	RobotClient.scan()
 
 
-func _on_scan_result(xml: String) -> void:
+func _on_scan_result(json: String) -> void:
 	if _config == null:
 		return
 	for child in _scan_list.get_children():
 		child.queue_free()
-	var scanned := RobotConfig.parse(xml)
+	var parsed: Variant = JSON.parse_string(json)
+	if parsed is not Dictionary:
+		_scan_list.add_child(_scan_message("Could not read the scan result."))
+		_scan_dialog.popup_centered()
+		return
+	var error := str(parsed.get("errorMessage", ""))
+	if not error.is_empty():
+		_scan_list.add_child(_scan_message(error))
 	var any := false
-	for dev: Dictionary in scanned.root.children:
-		if dev.tag == TAG_LYNX_USB_DEVICE or _has_peripheral(dev):
+	for entry: Variant in parsed.get("map", []):
+		if entry is not Dictionary:
 			continue
-		any = true
-		var row := HBoxContainer.new()
-		var label := Label.new()
-		label.text = "%s: %s" % [dev.tag, dev.attrs.get("name", "")]
-		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.add_child(label)
-		row.add_child(_text_button("Add", _scan_add.bind(dev.duplicate(true))))
-		_scan_list.add_child(row)
+		if _scan_row(str(entry.get("key", "")), str(entry.get("value", ""))):
+			any = true
 	if not any:
-		var label := Label.new()
-		label.text = "No new devices detected."
-		_scan_list.add_child(label)
+		_scan_list.add_child(_scan_message("No new devices detected."))
 	_scan_dialog.popup_centered()
 
 
-func _scan_add(dev: Dictionary) -> void:
-	_config.root.children.append(dev)
-	_refresh_editor()
+func _scan_row(serial: String, kind: String) -> bool:
+	var tag: String = SCAN_TYPE_TAGS.get(kind, "")
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", SCAN_ROW_GAP)
+
+	var text := VBoxContainer.new()
+	text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	text.add_theme_constant_override("separation", 2)
+	var title := Label.new()
+	title.text = SCAN_TYPE_LABELS.get(kind, kind)
+	text.add_child(title)
+	var subtitle := Label.new()
+	subtitle.text = serial
+	subtitle.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
+	subtitle.modulate.a = SCAN_SUBTLE_ALPHA
+	text.add_child(subtitle)
+	row.add_child(text)
+
+	var addable := false
+	if _has_serial(serial):
+		row.add_child(_scan_status("already configured"))
+	elif tag.is_empty():
+		row.add_child(_scan_status("not added here"))
+	else:
+		addable = true
+		var add := _text_button("Add", _add_peripheral.bind(tag, serial))
+		add.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		row.add_child(add)
+	_scan_list.add_child(row)
+	return addable
 
 
-func _has_peripheral(dev: Dictionary) -> bool:
+func _scan_status(text: String) -> Label:
+	var label := Label.new()
+	label.text = text
+	label.modulate.a = SCAN_SUBTLE_ALPHA
+	label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	return label
+
+
+func _scan_message(text: String) -> Label:
+	var label := Label.new()
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	label.text = text
+	return label
+
+
+func _has_serial(serial: String) -> bool:
 	for existing: Dictionary in _config.root.children:
-		if existing.tag == dev.tag and existing.attrs.get("name") == dev.attrs.get("name"):
+		if str(existing.attrs.get("serialNumber", "")) == serial:
 			return true
 	return false
 
@@ -395,7 +517,7 @@ func _on_save() -> void:
 		)
 		_reactivate_dialog.popup_centered()
 	else:
-		saved.emit(_meta, false)
+		saved.emit(_meta, true)
 		_refresh_editor()
 
 
@@ -414,7 +536,7 @@ func _on_save_as_confirmed() -> void:
 	RobotClient.save_configuration(meta, _config.to_xml())
 	_meta = meta.duplicate()
 	_baseline_xml = _config.to_xml()
-	saved.emit(_meta, false)
+	saved.emit(_meta, true)
 	_refresh_editor()
 
 
@@ -427,13 +549,13 @@ func _on_activate() -> void:
 
 func _on_activate_confirmed() -> void:
 	RobotClient.activate_configuration(_meta)
-	activated.emit()
+	activated.emit(_meta)
 
 
 func _on_reactivate_yes() -> void:
 	RobotClient.activate_configuration(_meta)
 	saved.emit(_meta, false)
-	activated.emit()
+	activated.emit(_meta)
 	_refresh_editor()
 
 
@@ -489,11 +611,15 @@ func _is_new() -> bool:
 
 func _on_device_list(json: String) -> void:
 	_catalog = DeviceCatalog.parse(json)
+	_flavors = {}
+	for entry: Dictionary in _catalog:
+		_flavors[entry.tag] = entry.flavor
 	_apply_device_filter()
 
 
 func _apply_device_filter() -> void:
 	_picker_entries = DeviceFilter.visible(_catalog)
+	_refresh_editor()
 
 
 ## Action-button enablement tracks whether the loaded config exists in the
@@ -524,9 +650,16 @@ func _build_dialogs() -> void:
 	_wire_dialog_edit(_saveas_dialog, _saveas_edit)
 
 	_custom_dialog = ConfirmationDialog.new()
+	var custom_box := VBoxContainer.new()
 	_custom_edit = LineEdit.new()
 	_custom_edit.custom_minimum_size.x = 280
-	_custom_dialog.add_child(_custom_edit)
+	_custom_edit.text_changed.connect(_validate_custom)
+	custom_box.add_child(_custom_edit)
+	_custom_hint = Label.new()
+	_custom_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_custom_hint.custom_minimum_size.x = 280
+	custom_box.add_child(_custom_hint)
+	_custom_dialog.add_child(custom_box)
 	_custom_dialog.register_text_enter(_custom_edit)
 	_custom_dialog.confirmed.connect(_on_custom_confirmed)
 	add_child(_custom_dialog)
@@ -548,9 +681,14 @@ func _build_dialogs() -> void:
 
 	_scan_dialog = AcceptDialog.new()
 	_scan_dialog.title = "Scan results"
+	var scan_scroll := ScrollContainer.new()
+	scan_scroll.custom_minimum_size = SCAN_LIST_MIN
+	scan_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_scan_list = VBoxContainer.new()
-	_scan_list.custom_minimum_size = Vector2(320, 120)
-	_scan_dialog.add_child(_scan_list)
+	_scan_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_scan_list.add_theme_constant_override("separation", SCAN_ROW_SEPARATION)
+	scan_scroll.add_child(_scan_list)
+	_scan_dialog.add_child(scan_scroll)
 	add_child(_scan_dialog)
 
 	_add_device_popup = PopupMenu.new()

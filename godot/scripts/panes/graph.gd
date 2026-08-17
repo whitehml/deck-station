@@ -62,10 +62,6 @@ func set_paused(value: bool) -> void:
 	queue_redraw()
 
 
-func is_paused() -> bool:
-	return _paused
-
-
 func _legend(key: String) -> String:
 	var s: TelemetrySeries = TelemetryLog.series(key)
 	if s == null or s.unit.is_empty():

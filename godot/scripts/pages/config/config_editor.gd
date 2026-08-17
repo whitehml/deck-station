@@ -4,6 +4,7 @@ extends VBoxContainer
 signal saved(meta: Dictionary, active_out_of_date: bool)
 signal activated(meta: Dictionary)
 signal deleted(meta: Dictionary)
+signal rebuilt
 
 enum CustomDialogMode { RENAME, CUSTOM_TAG }
 
@@ -24,6 +25,7 @@ var _config: RobotConfig = null  # working (edited) model
 var _meta: Dictionary = {}  # meta of the loaded config
 var _baseline_xml := ""  # serialized model as last loaded/saved
 var _add_device_target: Dictionary = {}
+var _focus_escape: Control = null
 
 var _saveas_dialog: ConfirmationDialog
 var _saveas_edit: LineEdit
@@ -40,9 +42,7 @@ var _add_device_popup: PopupMenu
 
 func _ready() -> void:
 	RobotClient.user_device_list_received.connect(_on_device_list)
-	RobotClient.scan_result_received.connect(
-		func(json: String) -> void: _scan_dialog.show_result(json)
-	)
+	RobotClient.scan_result_received.connect(_on_scan_result)
 	RobotClient.configurations_changed.connect(_on_configs_changed)
 	RobotClient.connection_changed.connect(_on_connection_changed)
 	DeviceFilter.changed.connect(_apply_device_filter)
@@ -72,6 +72,21 @@ func load_new(meta: Dictionary) -> void:
 	_meta = meta.duplicate()
 	_baseline_xml = ""
 	_refresh_editor()
+
+
+func set_focus_escape(target: Control) -> void:
+	_focus_escape = target
+	_apply_row_focus()
+
+
+func focus_entry() -> Control:
+	var target := FocusWiring.first_focusable(%EditorTree, false)
+	return target if target != null else action_entry()
+
+
+func action_entry() -> Control:
+	var target := FocusWiring.first_focusable(%Actions, false)
+	return target if target != null else %ScanButton as Control
 
 
 func clear() -> void:
@@ -107,6 +122,7 @@ func _refresh_editor() -> void:
 		var hint := Label.new()
 		hint.text = "Select a configuration on the left, or press New."
 		%EditorTree.add_child(hint)
+		rebuilt.emit()
 		return
 	for node: Dictionary in _config.root.children:
 		if node.tag == TAG_LYNX_USB_DEVICE:
@@ -125,6 +141,20 @@ func _refresh_editor() -> void:
 	%EditorTree.add_child(add_row)
 	if _is_read_only():
 		_lock_controls(%EditorTree)
+	_apply_row_focus()
+	rebuilt.emit()
+
+
+func _apply_row_focus() -> void:
+	var escaping := is_instance_valid(_focus_escape)
+	for row in %EditorTree.get_children():
+		var entries := FocusWiring.focusables(row, false)
+		FocusWiring.row(entries)
+		if escaping and not entries.is_empty():
+			FocusWiring.point(entries[0], SIDE_LEFT, _focus_escape)
+	FocusWiring.row(FocusWiring.focusables(%Actions, false))
+	if escaping:
+		FocusWiring.point(action_entry(), SIDE_LEFT, _focus_escape)
 
 
 func _lock_controls(node: Node) -> void:
@@ -132,7 +162,7 @@ func _lock_controls(node: Node) -> void:
 		if child is LineEdit:
 			(child as LineEdit).editable = false
 		elif child is BaseButton:
-			(child as BaseButton).disabled = true
+			FocusWiring.enable(child as BaseButton, false)
 		elif child is PortWheel:
 			child.focus_mode = Control.FOCUS_NONE
 			child.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -229,7 +259,9 @@ func _on_attr_option(value: int, node: Dictionary, key: String) -> void:
 
 func _on_edited() -> void:
 	%EditorTitle.text = _editor_title()
-	_update_action_buttons()
+	if _update_action_buttons():
+		_apply_row_focus()
+		rebuilt.emit()
 
 
 func _delete_child(parent: Dictionary, child: Dictionary) -> void:
@@ -476,13 +508,15 @@ func _editor_title() -> String:
 	return title
 
 
-func _update_action_buttons() -> void:
+func _update_action_buttons() -> bool:
 	var loaded := _config != null
-	%SaveButton.disabled = not loaded or _is_read_only() or not _is_dirty()
-	%SaveAsButton.disabled = not loaded
-	%ScanButton.disabled = not loaded or _is_read_only()
-	%ActivateButton.disabled = not loaded or _is_new()
-	%DeleteButton.disabled = not loaded or not _can_delete()
+	var before := FocusWiring.focusables(%Actions, false)
+	FocusWiring.enable(%SaveButton, loaded and not _is_read_only() and _is_dirty())
+	FocusWiring.enable(%SaveAsButton, loaded)
+	FocusWiring.enable(%ScanButton, loaded and not _is_read_only())
+	FocusWiring.enable(%ActivateButton, loaded and not _is_new())
+	FocusWiring.enable(%DeleteButton, loaded and _can_delete())
+	return FocusWiring.focusables(%Actions, false) != before
 
 
 func _is_dirty() -> bool:
@@ -523,7 +557,9 @@ func _apply_device_filter() -> void:
 ## Action-button enablement tracks whether the loaded config exists in the
 ## saved list (Activate) — refresh it whenever that list changes.
 func _on_configs_changed(_configs: Array) -> void:
-	_update_action_buttons()
+	if _update_action_buttons():
+		_apply_row_focus()
+		rebuilt.emit()
 
 
 ## The device-type catalog isn't auto-pushed, so (re)request it whenever the
@@ -592,6 +628,11 @@ func _build_dialogs() -> void:
 	_add_device_popup = PopupMenu.new()
 	_add_device_popup.id_pressed.connect(_on_add_device_id)
 	add_child(_add_device_popup)
+
+	for dialog: ConfirmationDialog in [
+		_saveas_dialog, _custom_dialog, _activate_dialog, _reactivate_dialog, _delete_dialog
+	]:
+		DialogCancel.install(dialog)
 
 
 func _wire_dialog_edit(dialog: ConfirmationDialog, edit: LineEdit) -> void:

@@ -28,6 +28,7 @@ func _ready() -> void:
 	_editor.saved.connect(_on_editor_saved)
 	_editor.activated.connect(_on_editor_activated)
 	_editor.deleted.connect(_on_editor_deleted)
+	_editor.rebuilt.connect(_wire_focus)
 
 	_build_ambiguity_dialog()
 	_load_state()
@@ -78,6 +79,33 @@ func _refresh_list() -> void:
 			row.add_theme_color_override(
 				"font_color", row.get_theme_color("font_disabled_color", "Button")
 			)
+	_wire_focus()
+
+
+## Both panes clip their rows, so geometric focus search reaches rows that
+## are scrolled out of sight and stops at the pane edge. Chain the list
+## explicitly and give every row a way across to the editor.
+func _wire_focus() -> void:
+	var rows: Array[Control] = []
+	for child in %ConfigList.get_children():
+		if not child.is_queued_for_deletion():
+			rows.append(child as Control)
+	var new_button := %NewButton as Control
+	var column := rows.duplicate()
+	column.append(new_button)
+	FocusWiring.column(column)
+	var entry := _editor.focus_entry() as Control
+	if entry != null:
+		FocusWiring.out_of(rows, SIDE_RIGHT, entry)
+	FocusWiring.point(new_button, SIDE_RIGHT, _editor.action_entry() as Control)
+	_editor.set_focus_escape(_escape_row(rows))
+
+
+func _escape_row(rows: Array[Control]) -> Control:
+	var idx := _selected_index()
+	if idx >= 0 and idx < rows.size():
+		return rows[idx]
+	return rows[0] if not rows.is_empty() else %NewButton as Control
 
 
 func _list_label(meta: Dictionary) -> String:

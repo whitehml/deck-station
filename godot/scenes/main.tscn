@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=13 format=3]
 
 [ext_resource type="Script" path="res://scripts/shell/main.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/drive_page.tscn" id="2"]
@@ -9,6 +9,7 @@
 [ext_resource type="PackedScene" path="res://scenes/field_screen.tscn" id="7"]
 [ext_resource type="Script" path="res://scripts/shell/status_bar.gd" id="8"]
 [ext_resource type="Script" path="res://scripts/settings/settings_menu.gd" id="9"]
+[ext_resource type="Script" path="res://scripts/widgets/scroll_pane.gd" id="10"]
 
 [sub_resource type="ButtonGroup" id="ButtonGroup_tabs"]
 
@@ -153,6 +154,7 @@ text = "Config"
 [node name="SettingsButton" type="MenuButton" parent="Layout/StatusBar/StatusRow"]
 unique_name_in_owner = true
 layout_mode = 2
+focus_mode = 2
 theme_type_variation = &"StatusBarMenuButton"
 flat = false
 text = "Settings"
@@ -169,6 +171,8 @@ layout_mode = 2
 theme_override_constants/separation = 12
 
 [node name="ErrorScroll" type="ScrollContainer" parent="Layout/ErrorBanner/ErrorRow"]
+script = ExtResource("10")
+capture = false
 custom_minimum_size = Vector2(0, 96)
 layout_mode = 2
 size_flags_horizontal = 3

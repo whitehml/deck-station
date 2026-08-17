@@ -60,9 +60,11 @@ func _build_menu() -> void:
 
 	popup.add_separator()
 	popup.add_item("Controls", CONTROLS_ID)
+	popup.add_item("Field Telemetry Format", FIELD_FORMAT_ID)
+
+	popup.add_separator()
 	popup.add_item("Device Filter", DEVICE_FILTER_ID)
 	popup.add_item("Field Frame", FIELD_FRAME_ID)
-	popup.add_item("Field Telemetry Format", FIELD_FORMAT_ID)
 	popup.add_item("Check for Updates", UPDATE_ID)
 	popup.add_item("Quit", QUIT_ID)
 	popup.id_pressed.connect(_on_id_pressed)
@@ -90,6 +92,7 @@ func _build_dialogs() -> void:
 	_quit_dialog.ok_button_text = "Quit"
 	_quit_dialog.confirmed.connect(func() -> void: get_tree().quit())
 	add_child(_quit_dialog)
+	DialogCancel.install(_quit_dialog)
 
 
 func _on_id_pressed(id: int) -> void:

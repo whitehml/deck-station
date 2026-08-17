@@ -42,6 +42,7 @@ func _ready() -> void:
 	_confirm.confirmed.connect(func() -> void: answered.emit(true))
 	_confirm.canceled.connect(func() -> void: answered.emit(false))
 	add_child(_confirm)
+	DialogCancel.install(_confirm)
 
 	set_process(false)
 

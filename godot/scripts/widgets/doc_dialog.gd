@@ -3,9 +3,26 @@ extends AcceptDialog
 
 const MIN_SIZE := Vector2i(900, 620)
 const SCREEN_MARGIN := 48
-const SCROLLBAR_WIDTH := 20
-const GRABBER_COLOR := Color(1.0, 1.0, 1.0, 0.24)
-const GRABBER_HOVER_COLOR := Color(1.0, 1.0, 1.0, 0.38)
+
+
+class DocPage:
+	extends ScrollPane
+
+	signal stepped(step: int)
+	signal dismissed
+
+	func _gui_input(event: InputEvent) -> void:
+		if event.is_action_pressed(&"ui_accept") or event.is_action_pressed(&"ui_cancel"):
+			dismissed.emit()
+			accept_event()
+			return
+		for step in [-1, 1]:
+			if event.is_action_pressed(&"ui_left" if step < 0 else &"ui_right", true):
+				stepped.emit(step)
+				accept_event()
+				return
+		super(event)
+
 
 var _tabs: TabContainer
 
@@ -39,6 +56,12 @@ func focus_page() -> void:
 		page.grab_focus()
 
 
+func _step_tab(step: int) -> void:
+	var count := _tabs.get_tab_count()
+	if count > 1:
+		_tabs.current_tab = (_tabs.current_tab + step + count) % count
+
+
 func _on_visibility_changed() -> void:
 	if visible:
 		focus_page()
@@ -54,7 +77,10 @@ func _fit_to_screen() -> void:
 
 
 func _page(page_name: String, always_show_bar := true) -> Control:
-	var scroll := ScrollPane.new()
+	var scroll := DocPage.new()
+	scroll.auto_capture = true
+	scroll.stepped.connect(_step_tab)
+	scroll.dismissed.connect(hide)
 	scroll.name = page_name
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.vertical_scroll_mode = (
@@ -62,13 +88,6 @@ func _page(page_name: String, always_show_bar := true) -> Control:
 		if always_show_bar
 		else ScrollContainer.SCROLL_MODE_AUTO
 	)
-
-	var bar := scroll.get_v_scroll_bar()
-	bar.custom_minimum_size.x = SCROLLBAR_WIDTH
-	bar.add_theme_stylebox_override(&"scroll", _flat(DocTable.TABLE_COLOR, 7, 6))
-	bar.add_theme_stylebox_override(&"grabber", _flat(GRABBER_COLOR, 7))
-	bar.add_theme_stylebox_override(&"grabber_highlight", _flat(GRABBER_HOVER_COLOR, 7))
-	bar.add_theme_stylebox_override(&"grabber_pressed", _flat(DocTable.HEADING_COLOR, 7))
 	return scroll
 
 
@@ -121,7 +140,3 @@ func _code(lines: Array) -> Control:
 
 func _label(text: String, color: Color, wrap := true) -> Label:
 	return DocTable.label(text, color, wrap)
-
-
-func _flat(color: Color, radius: int, padding_x := 0.0, padding_y := 0.0) -> StyleBoxFlat:
-	return DocTable.flat(color, radius, padding_x, padding_y)

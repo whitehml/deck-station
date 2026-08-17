@@ -3,10 +3,12 @@ extends VBoxContainer
 
 signal saved(meta: Dictionary, active_out_of_date: bool)
 signal activated(meta: Dictionary)
+signal deleted(meta: Dictionary)
 
 enum CustomDialogMode { RENAME, CUSTOM_TAG }
 
 const CUSTOM_ID := 999999
+const READ_ONLY_DIM := 0.55
 
 const TAG_LYNX_USB_DEVICE := DeviceCatalog.TAG_LYNX_USB_DEVICE
 const TAG_LYNX_MODULE := DeviceCatalog.TAG_LYNX_MODULE
@@ -31,6 +33,7 @@ var _custom_edit: LineEdit
 var _custom_hint: Label
 var _activate_dialog: ConfirmationDialog
 var _reactivate_dialog: ConfirmationDialog
+var _delete_dialog: ConfirmationDialog
 var _scan_dialog: ScanDialog
 var _add_device_popup: PopupMenu
 
@@ -47,6 +50,7 @@ func _ready() -> void:
 	%SaveButton.pressed.connect(_on_save)
 	%SaveAsButton.pressed.connect(_on_save_as)
 	%ActivateButton.pressed.connect(_on_activate)
+	%DeleteButton.pressed.connect(_on_delete)
 
 	_build_dialogs()
 	RobotClient.request_user_device_types()
@@ -98,6 +102,7 @@ func _refresh_editor() -> void:
 		child.queue_free()
 	%EditorTitle.text = _editor_title()
 	_update_action_buttons()
+	%EditorTree.modulate = Color(1, 1, 1, READ_ONLY_DIM if _is_read_only() else 1.0)
 	if _config == null:
 		var hint := Label.new()
 		hint.text = "Select a configuration on the left, or press New."
@@ -118,6 +123,20 @@ func _refresh_editor() -> void:
 	add_ethernet.tooltip_text = ADD_CAMERA_TOOLTIP
 	add_row.add_child(add_ethernet)
 	%EditorTree.add_child(add_row)
+	if _is_read_only():
+		_lock_controls(%EditorTree)
+
+
+func _lock_controls(node: Node) -> void:
+	for child in node.get_children():
+		if child is LineEdit:
+			(child as LineEdit).editable = false
+		elif child is BaseButton:
+			(child as BaseButton).disabled = true
+		elif child is PortWheel:
+			child.focus_mode = Control.FOCUS_NONE
+			child.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_lock_controls(child)
 
 
 func _build_usb_block(usb: Dictionary) -> void:
@@ -195,11 +214,15 @@ func _build_peripheral_row(parent: Node, dev: Dictionary) -> void:
 
 
 func _on_attr_text(text: String, node: Dictionary, key: String) -> void:
+	if _is_read_only():
+		return
 	node.attrs[key] = text
 	_on_edited()
 
 
 func _on_attr_option(value: int, node: Dictionary, key: String) -> void:
+	if _is_read_only():
+		return
 	node.attrs[key] = str(value)
 	_on_edited()
 
@@ -210,6 +233,8 @@ func _on_edited() -> void:
 
 
 func _delete_child(parent: Dictionary, child: Dictionary) -> void:
+	if _is_read_only():
+		return
 	parent.children.erase(child)
 	_refresh_editor()
 
@@ -341,7 +366,7 @@ func _has_serial(serial: String) -> bool:
 
 
 func _on_save() -> void:
-	if _config == null or _meta.get("location") == RobotClient.LOCATION_RESOURCE:
+	if _config == null or _is_read_only():
 		return
 	var meta := _save_meta(
 		_meta.get("name", ""),
@@ -403,6 +428,36 @@ func _on_reactivate_no() -> void:
 	_refresh_editor()
 
 
+func _on_delete() -> void:
+	if not _can_delete():
+		return
+	_delete_dialog.dialog_text = _delete_text()
+	_delete_dialog.popup_centered()
+
+
+func _delete_text() -> String:
+	var text: String = 'Delete "%s" from the robot? This cannot be undone.' % _meta.get("name", "")
+	if _is_active(_meta):
+		text += (
+			"\n\nThis is the active configuration; the robot keeps running it "
+			+ "until you activate another."
+		)
+	return text
+
+
+func _on_delete_confirmed() -> void:
+	if not _can_delete():
+		return
+	var meta := _meta.duplicate()
+	RobotClient.delete_configuration(meta)
+	clear()
+	deleted.emit(meta)
+
+
+func _can_delete() -> bool:
+	return not _meta.is_empty() and not _is_read_only() and not _is_new()
+
+
 func _save_meta(name: String, location: String, resource_id: int) -> Dictionary:
 	return {"isDirty": false, "location": location, "name": name, "resourceId": resource_id}
 
@@ -414,8 +469,8 @@ func _editor_title() -> String:
 	if _config == null:
 		return "Configuration"
 	var title: String = _meta.get("name", "(unnamed)")
-	if _meta.get("location") == RobotClient.LOCATION_RESOURCE:
-		title += "   ·   read-only (resource) — use Save As"
+	if _is_read_only():
+		title += "   ·   read-only; use Save As to edit a copy"
 	if _is_dirty():
 		title += "   ·   edited"
 	return title
@@ -423,11 +478,11 @@ func _editor_title() -> String:
 
 func _update_action_buttons() -> void:
 	var loaded := _config != null
-	var resource: bool = _meta.get("location", "") == RobotClient.LOCATION_RESOURCE
-	%SaveButton.disabled = not loaded or resource or not _is_dirty()
+	%SaveButton.disabled = not loaded or _is_read_only() or not _is_dirty()
 	%SaveAsButton.disabled = not loaded
-	%ScanButton.disabled = not loaded
+	%ScanButton.disabled = not loaded or _is_read_only()
 	%ActivateButton.disabled = not loaded or _is_new()
+	%DeleteButton.disabled = not loaded or not _can_delete()
 
 
 func _is_dirty() -> bool:
@@ -436,6 +491,10 @@ func _is_dirty() -> bool:
 
 func _is_active(meta: Dictionary) -> bool:
 	return RobotClient.config_is_active(meta)
+
+
+func _is_read_only() -> bool:
+	return RobotClient.location_is_read_only(str(_meta.get("location", "")))
 
 
 func _is_new() -> bool:
@@ -517,6 +576,13 @@ func _build_dialogs() -> void:
 	_reactivate_dialog.confirmed.connect(_on_reactivate_yes)
 	_reactivate_dialog.canceled.connect(_on_reactivate_no)
 	add_child(_reactivate_dialog)
+
+	_delete_dialog = ConfirmationDialog.new()
+	_delete_dialog.title = "Delete configuration?"
+	_delete_dialog.ok_button_text = "Delete"
+	_delete_dialog.cancel_button_text = "Keep"
+	_delete_dialog.confirmed.connect(_on_delete_confirmed)
+	add_child(_delete_dialog)
 
 	_scan_dialog = ScanDialog.new()
 	_scan_dialog.known_serials = _has_serial

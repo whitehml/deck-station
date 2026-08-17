@@ -36,6 +36,12 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "Scan"
 
+[node name="DeleteButton" type="Button" parent="Actions"]
+unique_name_in_owner = true
+layout_mode = 2
+disabled = true
+text = "Delete"
+
 [node name="Spacer" type="Control" parent="Actions"]
 layout_mode = 2
 size_flags_horizontal = 3

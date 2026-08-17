@@ -24,6 +24,7 @@ const GAMEPAD_HZ := 50.0
 
 const LOCATION_RESOURCE := "RESOURCE"
 const LOCATION_LOCAL := "LOCAL_STORAGE"
+const LOCATION_NONE := "NONE"
 
 ## Falls back to the Control Hub's own address (the Limelight's Ethernet-over-USB
 ## link is reachable there too) — same default peer Robocol itself tries first,
@@ -205,6 +206,11 @@ func request_user_device_types() -> void:
 
 func save_configuration(meta: Dictionary, xml: String) -> void:
 	_bridge.save_configuration(JSON.stringify(meta), xml)
+
+
+## Mirrors RobotConfigFile.isReadOnly() in the SDK.
+static func location_is_read_only(location: String) -> bool:
+	return location == LOCATION_RESOURCE or location == LOCATION_NONE
 
 
 func config_is_active(meta: Dictionary) -> bool:

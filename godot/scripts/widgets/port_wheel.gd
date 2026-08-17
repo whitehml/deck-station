@@ -1,6 +1,10 @@
 class_name PortWheel
 extends Control
 
+## Port picker on the ViewCapture contract: focus alone leaves ui_up /
+## ui_down to focus navigation, ui_accept opens the wheel and takes them
+## over, ui_accept commits and ui_cancel restores the value it opened on.
+
 signal value_changed(value: int)
 
 const ROW_HEIGHT := 22.0
@@ -23,7 +27,7 @@ var _typed_at := 0.0
 var _dragging := false
 var _drag_accum := 0.0
 var _overlay: Control = null
-var _focus_frame := -1
+var _entry_value := 0
 
 
 func _init() -> void:
@@ -31,7 +35,6 @@ func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	clip_contents = true
 	set_process(false)
-	focus_entered.connect(_on_focus_entered)
 	focus_exited.connect(_hide_overlay)
 
 
@@ -69,14 +72,10 @@ func _box(name: String) -> StyleBox:
 	return get_theme_stylebox(name, "LineEdit")
 
 
-func _on_focus_entered() -> void:
-	_focus_frame = Engine.get_process_frames()
-	_show_overlay()
-
-
 func _show_overlay() -> void:
 	if _overlay != null or _values.size() < 2:
 		return
+	_entry_value = value()
 	_overlay = Control.new()
 	_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_overlay.draw.connect(_draw_overlay.bind(_overlay))
@@ -110,10 +109,19 @@ func _place_overlay() -> void:
 
 
 func _gui_input(event: InputEvent) -> void:
-	if event.is_action_pressed("ui_accept"):
-		release_focus()
-		accept_event()
-		return
+	match ViewCapture.verdict(event, _overlay != null):
+		ViewCapture.TOGGLE:
+			if _overlay == null:
+				_show_overlay()
+			else:
+				_hide_overlay()
+			accept_event()
+			return
+		ViewCapture.RELEASE:
+			_select(_entry_value)
+			_hide_overlay()
+			accept_event()
+			return
 	if event is InputEventMouseButton:
 		_mouse_button(event)
 		return
@@ -125,8 +133,8 @@ func _gui_input(event: InputEvent) -> void:
 			_step(-way)
 		accept_event()
 		return
-	if event is InputEventKey and event.pressed:
-		_key(event)
+	if _overlay != null:
+		_nav(event)
 
 
 func _mouse_button(event: InputEventMouseButton) -> void:
@@ -142,30 +150,32 @@ func _mouse_button(event: InputEventMouseButton) -> void:
 			_step(-1)
 			accept_event()
 		MOUSE_BUTTON_LEFT:
+			grab_focus()
 			if event.position.x >= size.x - ARROW_WIDTH:
-				if _focus_frame == Engine.get_process_frames():
-					release_focus()
 				_step(1 if event.position.y < size.y * 0.5 else -1)
 			else:
-				grab_focus()
+				_show_overlay()
 				_dragging = true
 				_drag_accum = 0.0
 			accept_event()
 
 
-func _key(event: InputEventKey) -> void:
-	if event.is_action("ui_up"):
+## Only reached with the wheel open, so ui_up / ui_down belong to it whatever
+## device they arrived from — d-pad and stick included, not just the keyboard.
+func _nav(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_up", true):
 		_step(1)
 		accept_event()
 		return
-	if event.is_action("ui_down"):
+	if event.is_action_pressed("ui_down", true):
 		_step(-1)
 		accept_event()
 		return
-	var digit := _digit(event.keycode)
-	if digit >= 0:
-		_type_digit(str(digit))
-		accept_event()
+	if event is InputEventKey and event.pressed:
+		var digit := _digit((event as InputEventKey).keycode)
+		if digit >= 0:
+			_type_digit(str(digit))
+			accept_event()
 
 
 func _digit(keycode: Key) -> int:

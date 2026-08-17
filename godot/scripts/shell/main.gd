@@ -94,7 +94,7 @@ func _show_page(page_name: StringName) -> void:
 
 func _link_tab_to_page(page_name: StringName) -> void:
 	var tab: Button = _tabs[page_name]
-	var target := _first_focusable(_pages[page_name])
+	var target := FocusWiring.first_focusable(_pages[page_name])
 	if target:
 		tab.focus_neighbor_bottom = tab.get_path_to(target)
 		target.focus_neighbor_top = target.get_path_to(tab)
@@ -105,7 +105,7 @@ func _cycle_page(dir: int) -> void:
 	if i == -1:
 		return
 	_show_page(PAGE_ORDER[(i + dir + PAGE_ORDER.size()) % PAGE_ORDER.size()])
-	var target := _first_focusable(_pages[_current_page])
+	var target := FocusWiring.first_focusable(_pages[_current_page])
 	if target:
 		target.grab_focus()
 
@@ -144,7 +144,7 @@ func _on_grip_hold_started(grip: StringName) -> void:
 			if %SettingsButton.controls_help_visible():
 				%SettingsButton.focus_controls_help()
 				return
-			var target := _first_focusable(_pages[_current_page])
+			var target := FocusWiring.first_focusable(_pages[_current_page])
 			if target:
 				target.grab_focus()
 		&"R5":
@@ -180,18 +180,3 @@ func _on_grip_hold_ended(grip: StringName) -> void:
 func _stop() -> void:
 	if RobotClient.phase in [RobotClient.Phase.INIT, RobotClient.Phase.RUNNING]:
 		RobotClient.stop_opmode()
-
-
-func _first_focusable(node: Node) -> Control:
-	if (
-		node is Control
-		and node.is_visible_in_tree()
-		and node.focus_mode == Control.FOCUS_ALL
-		and not (node is BaseButton and node.disabled)
-	):
-		return node
-	for child in node.get_children():
-		var found := _first_focusable(child)
-		if found:
-			return found
-	return null

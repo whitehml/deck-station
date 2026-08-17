@@ -18,6 +18,7 @@ const SCAN_LIST_MIN := Vector2(560, 320)
 const SCAN_ROW_SEPARATION := 12
 const SCAN_ROW_GAP := 16
 const SCAN_SUBTLE_ALPHA := 0.7
+const ADDED_TEXT := "already configured"
 
 var known_serials: Callable
 
@@ -78,16 +79,24 @@ func _row(serial: String, kind: String) -> bool:
 
 	var addable := false
 	if known_serials.call(serial):
-		row.add_child(_status("already configured"))
+		row.add_child(_status(ADDED_TEXT))
 	elif tag.is_empty():
 		row.add_child(_status("not added here"))
 	else:
 		addable = true
-		var add := EditorRows.text_button("Add", func() -> void: device_picked.emit(tag, serial))
+		var add := Button.new()
+		add.text = "Add"
 		add.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		add.pressed.connect(func() -> void: _on_add(add, row, tag, serial))
 		row.add_child(add)
 	_list.add_child(row)
 	return addable
+
+
+func _on_add(button: Button, row: HBoxContainer, tag: String, serial: String) -> void:
+	button.queue_free()
+	row.add_child(_status(ADDED_TEXT))
+	device_picked.emit(tag, serial)
 
 
 func _status(text: String) -> Label:

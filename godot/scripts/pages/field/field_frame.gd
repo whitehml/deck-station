@@ -1,7 +1,6 @@
 class_name FieldFrame
 
 const LABEL_SIZE := 12
-const CORNER_COLOR := Color(0.6, 0.64, 0.72)
 
 
 static func square(size: Vector2, pad: float) -> Rect2:
@@ -28,21 +27,28 @@ static func trim(value: float) -> String:
 
 
 static func draw_corners(
-	canvas: CanvasItem, rect: Rect2, corner_min: Vector2, corner_max: Vector2, pad: float
+	canvas: CanvasItem,
+	rect: Rect2,
+	corner_min: Vector2,
+	corner_max: Vector2,
+	pad: float,
+	color: Color
 ) -> void:
 	var lo := corner_min
 	var hi := corner_max
 	var above := pad * 0.25
 	var below := pad * 0.6
-	_label(canvas, Vector2(lo.x, hi.y), rect.position + Vector2(0, -above), false)
-	_label(canvas, hi, Vector2(rect.end.x, rect.position.y - above), true)
-	_label(canvas, lo, Vector2(rect.position.x, rect.end.y + below), false)
-	_label(canvas, Vector2(hi.x, lo.y), Vector2(rect.end.x, rect.end.y + below), true)
+	_label(canvas, Vector2(lo.x, hi.y), rect.position + Vector2(0, -above), false, color)
+	_label(canvas, hi, Vector2(rect.end.x, rect.position.y - above), true, color)
+	_label(canvas, lo, Vector2(rect.position.x, rect.end.y + below), false, color)
+	_label(canvas, Vector2(hi.x, lo.y), Vector2(rect.end.x, rect.end.y + below), true, color)
 
 
-static func _label(canvas: CanvasItem, value: Vector2, at: Vector2, right: bool) -> void:
+static func _label(
+	canvas: CanvasItem, value: Vector2, at: Vector2, right: bool, color: Color
+) -> void:
 	var text := "%s, %s" % [trim(value.x), trim(value.y)]
 	var font := ThemeDB.fallback_font
 	if right:
 		at.x -= font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, LABEL_SIZE).x
-	canvas.draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, LABEL_SIZE, CORNER_COLOR)
+	canvas.draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, LABEL_SIZE, color)

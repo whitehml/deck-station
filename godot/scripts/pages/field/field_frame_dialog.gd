@@ -3,24 +3,31 @@ extends ConfirmationDialog
 
 const RANGE := 100000.0
 const PREVIEW_SIZE := Vector2(260, 200)
-const TEXT_COLOR := Color(0.6, 0.64, 0.72)
 
 
 class CornerPreview:
 	extends Control
 
 	const PAD := 34.0
-	const FILL := Color(0.09, 0.11, 0.14)
-	const BORDER := Color(0.31, 0.62, 1.0, 0.7)
 
 	var corner_min := Vector2.ZERO
 	var corner_max := Vector2.ONE
 
+	func _ready() -> void:
+		theme_changed.connect(queue_redraw)
+
 	func _draw() -> void:
 		var rect := FieldFrame.square(size, PAD)
-		draw_rect(rect, FILL)
-		draw_rect(rect, BORDER, false, 2.0)
-		FieldFrame.draw_corners(self, rect, corner_min, corner_max, PAD)
+		draw_rect(rect, get_theme_color(&"surface", ThemeTokens.FIELD_TYPE))
+		draw_rect(rect, get_theme_color(&"border", ThemeTokens.FIELD_TYPE), false, 2.0)
+		FieldFrame.draw_corners(
+			self,
+			rect,
+			corner_min,
+			corner_max,
+			PAD,
+			get_theme_color(&"label", ThemeTokens.FIELD_TYPE)
+		)
 
 
 var _min_x: SpinBox
@@ -89,7 +96,6 @@ func _cell(grid: GridContainer, axis: String) -> SpinBox:
 	if not axis.is_empty():
 		var tag := Label.new()
 		tag.text = axis
-		tag.add_theme_color_override(&"font_color", TEXT_COLOR)
 		holder.add_child(tag)
 
 	var spin := SpinBox.new()
@@ -109,7 +115,6 @@ func _note(text: String) -> Label:
 	label.text = text
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.custom_minimum_size.x = PREVIEW_SIZE.x + 160
-	label.add_theme_color_override(&"font_color", TEXT_COLOR)
 	return label
 
 

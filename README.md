@@ -31,7 +31,7 @@ itself. From the GitHub **Releases** page, download
 a new, empty folder:
 
 ```sh
-mkdir -p ~/deck && tar -xzf deck-station-*-linux-x86_64.tar.gz -C ~/deck
+mkdir -p ~/deck && tar -xzf ~/Downloads/deck-station-*-linux-x86_64.tar.gz -C ~/deck
 ```
 
 You get one file to run, plus a folder holding everything else:

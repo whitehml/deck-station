@@ -21,9 +21,18 @@ static func default_theme() -> Theme:
 			theme.set_stylebox(
 				state, type, _repadded(default.get_stylebox(state, type), ThemeTokens.BUTTON_MARGIN)
 			)
+	theme.set_type_variation(ThemeTokens.PANE_TYPE, &"PanelContainer")
+	theme.set_stylebox("panel", ThemeTokens.PANE_TYPE, _default_pane())
 	_set_colors(theme, ThemeTokens.STATUS_TYPE, ThemeTokens.STATUS_COLORS)
 	_set_colors(theme, ThemeTokens.RADIAL_TYPE, ThemeTokens.DEFAULT_RADIAL_COLORS)
+	_set_colors(theme, ThemeTokens.FIELD_TYPE, ThemeTokens.DEFAULT_FIELD_COLORS)
 	return theme
+
+
+static func _default_pane() -> StyleBoxFlat:
+	var box := _button_box(Color(0.05, 0.07, 0.1, 0.5), Color(0.31, 0.62, 1.0, 0.9))
+	apply_margins(box, ThemeTokens.PANE_MARGIN)
+	return box
 
 
 static func _register_bar_types(theme: Theme) -> void:
@@ -107,12 +116,51 @@ static func accent_theme(theme_spec: Dictionary) -> Theme:
 		_style_buttons(
 			theme, ThemeTokens.BAR_BUTTON_TYPES.keys(), pattern[&"dot"], bg, text, dim, accent
 		)
+	_style_checks(theme, accent, bg, text, dim)
+
+	theme.set_type_variation(ThemeTokens.PANE_TYPE, &"PanelContainer")
+	theme.set_stylebox("panel", ThemeTokens.PANE_TYPE, _pane_box(accent, bg, text))
 
 	_style_popups(theme, accent, bg, text, dim)
 	_style_inputs(theme, accent, bg, text, dim)
 	_set_colors(theme, ThemeTokens.STATUS_TYPE, ColorMath.fit_all(ThemeTokens.STATUS_COLORS, bg))
 	_set_colors(theme, ThemeTokens.RADIAL_TYPE, _radial_colors(accent, bg, text))
+	_set_colors(theme, ThemeTokens.FIELD_TYPE, _field_colors(accent, bg, text))
 	return theme
+
+
+static func _style_checks(theme: Theme, accent: Color, bg: Color, text: Color, dim: Color) -> void:
+	var ink := ColorMath.ink(accent, bg, text)
+	for type in ThemeTokens.CHECK_TYPES:
+		for state in ["normal", "pressed", "disabled"]:
+			var flat := StyleBoxEmpty.new()
+			apply_margins(flat, ThemeTokens.BUTTON_MARGIN)
+			theme.set_stylebox(state, type, flat)
+		for state in ["hover", "focus", "hover_pressed"]:
+			theme.set_stylebox(state, type, _button_box(bg.lerp(accent, 0.15), ink))
+		for name in ["font_color", "font_pressed_color", "font_hover_pressed_color"]:
+			theme.set_color(name, type, text)
+		theme.set_color("font_hover_color", type, ink)
+		theme.set_color("font_focus_color", type, ink)
+		theme.set_color("font_disabled_color", type, dim)
+
+
+static func _pane_box(accent: Color, bg: Color, text: Color) -> StyleBoxFlat:
+	var ink := ColorMath.ink(accent, bg, text)
+	var box := _button_box(bg, ink.lerp(bg, 0.6))
+	apply_margins(box, ThemeTokens.PANE_MARGIN)
+	return box
+
+
+static func _field_colors(accent: Color, bg: Color, text: Color) -> Dictionary:
+	var ink := ColorMath.ink(accent, bg, text)
+	return {
+		&"surface": bg.lerp(ink, 0.08),
+		&"grid": Color(text.r, text.g, text.b, 0.1),
+		&"grid_center": Color(text.r, text.g, text.b, 0.2),
+		&"border": Color(ink.r, ink.g, ink.b, 0.6),
+		&"label": Color(text.r, text.g, text.b, 0.7),
+	}
 
 
 static func _set_colors(theme: Theme, type: StringName, colors: Dictionary) -> void:
@@ -161,7 +209,7 @@ static func _style_popups(theme: Theme, accent: Color, bg: Color, text: Color, d
 	theme.set_stylebox("labeled_separator_left", "PopupMenu", separator.duplicate())
 	theme.set_stylebox("labeled_separator_right", "PopupMenu", separator.duplicate())
 
-	_set_check_icons(theme, ink, dim)
+	_set_check_icons(theme, ink, accent, dim)
 
 	theme.set_color("font_color", "TooltipLabel", text)
 
@@ -175,16 +223,16 @@ static func _style_popups(theme: Theme, accent: Color, bg: Color, text: Color, d
 	theme.set_color("title_color", "Window", text)
 
 
-static func _set_check_icons(theme: Theme, accent: Color, dim: Color) -> void:
+static func _set_check_icons(theme: Theme, ink: Color, accent: Color, dim: Color) -> void:
 	var icons := {
-		"radio_checked": IconFactory.bubble_icon(accent, true),
-		"radio_unchecked": IconFactory.bubble_icon(accent, false),
-		"radio_checked_disabled": IconFactory.bubble_icon(dim, true),
-		"radio_unchecked_disabled": IconFactory.bubble_icon(dim, false),
-		"checked": IconFactory.box_icon(accent, true),
-		"unchecked": IconFactory.box_icon(accent, false),
-		"checked_disabled": IconFactory.box_icon(dim, true),
-		"unchecked_disabled": IconFactory.box_icon(dim, false),
+		"radio_checked": IconFactory.bubble_icon(ink, accent, true),
+		"radio_unchecked": IconFactory.bubble_icon(ink, accent, false),
+		"radio_checked_disabled": IconFactory.bubble_icon(dim, dim, true),
+		"radio_unchecked_disabled": IconFactory.bubble_icon(dim, dim, false),
+		"checked": IconFactory.box_icon(ink, accent, true),
+		"unchecked": IconFactory.box_icon(ink, accent, false),
+		"checked_disabled": IconFactory.box_icon(dim, dim, true),
+		"unchecked_disabled": IconFactory.box_icon(dim, dim, false),
 	}
 	for name in icons:
 		theme.set_icon(name, "PopupMenu", icons[name])

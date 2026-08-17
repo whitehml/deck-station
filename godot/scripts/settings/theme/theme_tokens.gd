@@ -7,7 +7,9 @@ const BUTTON_MARGIN := Vector4(10, 6, 10, 6)
 ## to expand outward to reach the title bar strip above it.
 const WINDOW_BORDER_EXPAND := Vector4(8, 32, 8, 6)
 
-const BUTTON_TYPES := ["Button", "MenuButton", "OptionButton", "CheckBox", "CheckButton"]
+const BUTTON_TYPES := ["Button", "MenuButton", "OptionButton"]
+
+const CHECK_TYPES := ["CheckBox", "CheckButton"]
 
 const ICON_SIZE := 16
 const ICON_SUPERSAMPLE := 4
@@ -18,6 +20,10 @@ const ICON_STROKE := 1.6
 ## their own literals.
 const STATUS_TYPE := &"Status"
 const RADIAL_TYPE := &"RadialMenu"
+const FIELD_TYPE := &"Field"
+
+const PANE_TYPE := &"Pane"
+const PANE_MARGIN := Vector4(10, 8, 10, 8)
 
 const STATUSBAR_TYPE := &"StatusBar"
 const STATUSBAR_CARD_TYPE := &"StatusBarCard"
@@ -43,6 +49,15 @@ const STATUS_COLORS := {
 	&"endgame": Color.ORANGE_RED,
 	&"slot1": Color.GREEN_YELLOW,
 	&"slot2": Color.ORANGE,
+	&"system": Color.YELLOW,
+}
+
+const DEFAULT_FIELD_COLORS := {
+	&"surface": Color(0.09, 0.11, 0.14),
+	&"grid": Color(1.0, 1.0, 1.0, 0.06),
+	&"grid_center": Color(1.0, 1.0, 1.0, 0.12),
+	&"border": Color(0.31, 0.62, 1.0, 0.5),
+	&"label": Color(0.6, 0.64, 0.72),
 }
 
 const DEFAULT_RADIAL_COLORS := {

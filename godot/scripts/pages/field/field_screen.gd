@@ -4,7 +4,6 @@ signal format_help_requested
 signal frame_requested
 
 const SWATCH_SIZE := Vector2(12, 12)
-const HEADER_COLOR := Color(0.6, 0.64, 0.72)
 
 var _checks: Dictionary = {}
 
@@ -19,6 +18,7 @@ func _ready() -> void:
 	%ClearButton.pressed.connect(FieldLog.clear)
 	FieldLog.classes_changed.connect(_rebuild_classes)
 	FieldLog.toggles_changed.connect(_sync_checks)
+	theme_changed.connect(func() -> void: _rebuild_classes(FieldLog.class_names()))
 	_rebuild_classes(FieldLog.class_names())
 
 
@@ -46,7 +46,7 @@ func _rebuild_classes(names: Array) -> void:
 		return
 	%ClassList.add_child(_header("Class"))
 	%ClassList.add_child(_header("Show"))
-	%ClassList.add_child(_header("Head"))
+	%ClassList.add_child(_header("Hdg"))
 	for cls: String in names:
 		var name_of := cls
 		%ClassList.add_child(_name_cell(cls))
@@ -79,7 +79,7 @@ func _sync_checks() -> void:
 func _header(text: String) -> Label:
 	var label := Label.new()
 	label.text = text
-	label.add_theme_color_override(&"font_color", HEADER_COLOR)
+	label.add_theme_color_override(&"font_color", get_theme_color(&"label", ThemeTokens.FIELD_TYPE))
 	return label
 
 

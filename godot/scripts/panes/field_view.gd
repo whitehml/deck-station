@@ -9,10 +9,6 @@ const POINT_HEADING_PX := 16.0
 const ARROW_HEAD_PX := 10.0
 const HINT_SIZE := 16
 const ZONE_FILL_ALPHA := 0.22
-const FIELD_COLOR := Color(0.09, 0.11, 0.14)
-const TILE_COLOR := Color(1.0, 1.0, 1.0, 0.06)
-const CENTER_COLOR := Color(1.0, 1.0, 1.0, 0.12)
-const BORDER_COLOR := Color(0.31, 0.62, 1.0, 0.5)
 
 var _items: Array = []
 var _rect := Rect2()
@@ -26,6 +22,7 @@ func _ready() -> void:
 	FieldLog.frame_changed.connect(queue_redraw)
 	FieldLog.image_changed.connect(_on_image_changed)
 	resized.connect(queue_redraw)
+	theme_changed.connect(queue_redraw)
 	_on_image_changed(FieldLog.image_index)
 	_items = FieldLog.items()
 
@@ -57,7 +54,9 @@ func _draw() -> void:
 	_rect = FieldFrame.square(size, CORNER_PAD)
 	_span = FieldFrame.span(FieldLog.frame_min, FieldLog.frame_max)
 	_draw_backdrop()
-	FieldFrame.draw_corners(self, _rect, FieldLog.frame_min, FieldLog.frame_max, CORNER_PAD)
+	FieldFrame.draw_corners(
+		self, _rect, FieldLog.frame_min, FieldLog.frame_max, CORNER_PAD, _field_color(&"label")
+	)
 	if _items.is_empty():
 		_draw_hint()
 		return
@@ -67,19 +66,25 @@ func _draw() -> void:
 				_draw_item(item)
 
 
+func _field_color(name: StringName) -> Color:
+	return get_theme_color(name, ThemeTokens.FIELD_TYPE)
+
+
 func _draw_backdrop() -> void:
 	if _texture:
 		draw_texture_rect(_texture, _rect, false)
 	else:
-		draw_rect(_rect, FIELD_COLOR)
+		draw_rect(_rect, _field_color(&"surface"))
+		var grid := _field_color(&"grid")
+		var center := _field_color(&"grid_center")
 		for i in range(1, TILES):
 			var t := float(i) / TILES
-			var color := CENTER_COLOR if i == TILES / 2 else TILE_COLOR
+			var color := center if i == TILES / 2 else grid
 			var x := _rect.position.x + _rect.size.x * t
 			var y := _rect.position.y + _rect.size.y * t
 			draw_line(Vector2(x, _rect.position.y), Vector2(x, _rect.end.y), color)
 			draw_line(Vector2(_rect.position.x, y), Vector2(_rect.end.x, y), color)
-	draw_rect(_rect, BORDER_COLOR, false, 2.0)
+	draw_rect(_rect, _field_color(&"border"), false, 2.0)
 
 
 func _draw_hint() -> void:
@@ -90,7 +95,7 @@ func _draw_hint() -> void:
 		HORIZONTAL_ALIGNMENT_LEFT,
 		-1,
 		HINT_SIZE,
-		Color.GRAY
+		_field_color(&"label")
 	)
 
 

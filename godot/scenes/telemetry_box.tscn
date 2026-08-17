@@ -1,10 +1,9 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=2 format=3]
 
-[ext_resource type="StyleBoxFlat" path="res://themes/pane_box.tres" id="1"]
 [ext_resource type="Script" path="res://scripts/panes/telemetry_box.gd" id="2"]
 
 [node name="Box" type="PanelContainer"]
-theme_override_styles/panel = ExtResource("1")
+theme_type_variation = &"Pane"
 script = ExtResource("2")
 
 [node name="Rows" type="VBoxContainer" parent="."]

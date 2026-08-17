@@ -14,6 +14,11 @@ func _ready() -> void:
 	_render()
 
 
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_THEME_CHANGED and is_node_ready():
+		_render()
+
+
 func set_entries(entries: Array) -> void:
 	_entries = entries
 	_render()
@@ -23,7 +28,8 @@ func set_entries(entries: Array) -> void:
 ## only cost of showing it is a shorter right margin on that one line.
 func _render() -> void:
 	_system_toggle.visible = _entries.any(func(e: Dictionary) -> bool: return e.phase == "SYSTEM")
-	var lines := RobotClient.format_telemetry(_entries).split("\n", true, 1)
+	var system_color := get_theme_color(&"system", ThemeTokens.STATUS_TYPE)
+	var lines := RobotClient.format_telemetry(_entries, system_color).split("\n", true, 1)
 	_first_line.text = lines[0] if lines.size() > 0 else ""
 	_text.text = lines[1] if lines.size() > 1 else ""
 

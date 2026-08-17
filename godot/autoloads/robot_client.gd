@@ -156,16 +156,20 @@ func set_show_system_telemetry(shown: bool) -> void:
 	system_telemetry_shown_changed.emit(shown)
 
 
-## System entries lead, in yellow; opmode telemetry follows in its own order.
-func format_telemetry(entries: Array) -> String:
+## System entries lead, tinted; opmode telemetry follows in its own order. The
+## caller passes the theme-fitted tint so the lines survive a light panel.
+func format_telemetry(
+	entries: Array, system_color := ThemeTokens.STATUS_COLORS[&"system"] as Color
+) -> String:
+	var tint := system_color.to_html(false)
 	var system := PackedStringArray()
 	var lines := PackedStringArray()
 	for e in entries:
 		if e.phase == "SYSTEM":
 			if show_system_telemetry:
-				system.append("[color=yellow]%s[/color]" % e.key)
+				system.append("[color=#%s]%s[/color]" % [tint, e.key])
 			continue
-		if str(e.key).strip_edges().begins_with(FieldContract.MARKER):
+		if FieldContract.consumed(e):
 			continue
 		lines.append(e.key if str(e.value).is_empty() else "%s: %s" % [e.key, e.value])
 	return "\n".join(system + lines)

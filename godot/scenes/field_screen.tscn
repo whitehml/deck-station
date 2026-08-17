@@ -1,8 +1,7 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/pages/field/field_screen.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/panes/field_view.gd" id="2"]
-[ext_resource type="StyleBoxFlat" path="res://themes/pane_box.tres" id="3"]
 
 [node name="Field" type="VBoxContainer"]
 anchors_preset = 15
@@ -28,7 +27,7 @@ custom_minimum_size = Vector2(260, 0)
 [node name="FrameButton" type="Button" parent="Toolbar"]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Frame..."
+text = "Frame"
 
 [node name="FormatButton" type="Button" parent="Toolbar"]
 unique_name_in_owner = true
@@ -56,11 +55,7 @@ theme_override_constants/margin_left = 8
 theme_override_constants/margin_top = 8
 theme_override_constants/margin_bottom = 8
 
-[node name="Box" type="PanelContainer" parent="Body/ViewMargin"]
-layout_mode = 2
-theme_override_styles/panel = ExtResource("3")
-
-[node name="View" type="Control" parent="Body/ViewMargin/Box"]
+[node name="View" type="Control" parent="Body/ViewMargin"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
@@ -75,7 +70,7 @@ theme_override_constants/margin_bottom = 8
 [node name="Side" type="PanelContainer" parent="Body/SideMargin"]
 layout_mode = 2
 custom_minimum_size = Vector2(280, 0)
-theme_override_styles/panel = ExtResource("3")
+theme_type_variation = &"Pane"
 
 [node name="SideBox" type="VBoxContainer" parent="Body/SideMargin/Side"]
 layout_mode = 2

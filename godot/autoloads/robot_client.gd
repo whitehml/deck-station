@@ -19,7 +19,6 @@ signal video_stream_ended(source: String)
 
 enum Phase { DISCONNECTED, IDLE, INIT, RUNNING }
 
-const TELEMETRY_HZ := 10.0
 const GAMEPAD_HZ := 50.0
 
 const LOCATION_RESOURCE := "RESOURCE"

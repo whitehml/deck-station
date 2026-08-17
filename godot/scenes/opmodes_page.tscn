@@ -1,7 +1,8 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/pages/opmodes/opmodes_page.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/telemetry_box.tscn" id="2"]
+[ext_resource type="Script" path="res://scripts/widgets/scroll_pane.gd" id="3"]
 
 [node name="OpModesPage" type="VBoxContainer"]
 anchors_preset = 15
@@ -37,6 +38,8 @@ layout_mode = 2
 text = "Autonomous"
 
 [node name="AutoScroll" type="ScrollContainer" parent="Columns/AutoColumn"]
+script = ExtResource("3")
+capture = false
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
@@ -66,6 +69,8 @@ layout_mode = 2
 text = "TeleOp"
 
 [node name="TeleScroll" type="ScrollContainer" parent="Columns/TeleColumn"]
+script = ExtResource("3")
+capture = false
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3

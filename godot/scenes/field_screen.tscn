@@ -1,7 +1,8 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/pages/field/field_screen.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/panes/field_view.gd" id="2"]
+[ext_resource type="Script" path="res://scripts/widgets/scroll_pane.gd" id="3"]
 
 [node name="Field" type="VBoxContainer"]
 anchors_preset = 15
@@ -87,6 +88,8 @@ autowrap_mode = 3
 text = "Nothing yet. Send a #f telemetry line to draw on the field."
 
 [node name="ClassScroll" type="ScrollContainer" parent="Body/SideMargin/Side/SideBox"]
+script = ExtResource("3")
+capture = false
 layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0

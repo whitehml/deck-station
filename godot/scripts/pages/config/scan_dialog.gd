@@ -27,7 +27,8 @@ var _list: VBoxContainer
 
 func _init() -> void:
 	title = "Scan results"
-	var scroll := ScrollContainer.new()
+	var scroll := ScrollPane.new()
+	scroll.capture = false
 	scroll.custom_minimum_size = SCAN_LIST_MIN
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_list = VBoxContainer.new()

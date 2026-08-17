@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/pages/config/config_editor.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/widgets/scroll_pane.gd" id="2"]
 
 [node name="ConfigEditor" type="VBoxContainer"]
 anchors_preset = 15
@@ -17,9 +18,10 @@ layout_mode = 2
 text = "Configuration"
 
 [node name="EditorScroll" type="ScrollContainer" parent="."]
+script = ExtResource("2")
+capture = false
 layout_mode = 2
 size_flags_vertical = 3
-horizontal_scroll_mode = 0
 
 [node name="EditorTree" type="VBoxContainer" parent="EditorScroll"]
 unique_name_in_owner = true
@@ -28,6 +30,7 @@ size_flags_horizontal = 3
 theme_override_constants/separation = 6
 
 [node name="Actions" type="HBoxContainer" parent="."]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 8
 

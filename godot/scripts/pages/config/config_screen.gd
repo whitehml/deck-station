@@ -27,6 +27,7 @@ func _ready() -> void:
 	%NewButton.pressed.connect(_on_new)
 	_editor.saved.connect(_on_editor_saved)
 	_editor.activated.connect(_on_editor_activated)
+	_editor.deleted.connect(_on_editor_deleted)
 
 	_build_ambiguity_dialog()
 	_load_state()
@@ -73,12 +74,16 @@ func _refresh_list() -> void:
 			row.add_theme_color_override(
 				"font_color", row.get_theme_color(status, ThemeTokens.STATUS_TYPE)
 			)
+		elif _is_read_only(meta):
+			row.add_theme_color_override(
+				"font_color", row.get_theme_color("font_disabled_color", "Button")
+			)
 
 
 func _list_label(meta: Dictionary) -> String:
 	var label: String = meta.get("name", "")
-	if meta.get("location") == RobotClient.LOCATION_RESOURCE:
-		label += "  (resource)"
+	if _is_read_only(meta):
+		label += "  (read-only)"
 	if _is_active(meta):
 		match _active_status(meta):
 			&"warn":
@@ -177,6 +182,29 @@ func _poll_until_listed(name: String) -> void:
 
 func _on_editor_activated(meta: Dictionary) -> void:
 	_mark_activated(meta)
+
+
+func _on_editor_deleted(meta: Dictionary) -> void:
+	var key := _config_key(meta)
+	if _stale_key == key:
+		_stale_key = ""
+	if _activated_key == key:
+		_activated_key = ""
+	_ambiguous_keys.erase(key)
+	_save_state()
+	if _selected_name == meta.get("name", ""):
+		_selected_name = ""
+	_pending_metas.clear()
+	_refresh_list()
+	_poll_until_unlisted(meta.get("name", ""))
+
+
+func _poll_until_unlisted(name: String) -> void:
+	for _i in LIST_POLL_TRIES:
+		RobotClient.request_configurations()
+		await get_tree().create_timer(LIST_POLL_INTERVAL).timeout
+		if not _configs.any(func(c: Dictionary) -> bool: return c.get("name") == name):
+			return
 
 
 func _mark_activated(meta: Dictionary) -> void:
@@ -283,6 +311,10 @@ func _key_name(key: String) -> String:
 
 func _is_active(meta: Dictionary) -> bool:
 	return RobotClient.config_is_active(meta)
+
+
+func _is_read_only(meta: Dictionary) -> bool:
+	return RobotClient.location_is_read_only(str(meta.get("location", "")))
 
 
 func _config_key(meta: Dictionary) -> String:

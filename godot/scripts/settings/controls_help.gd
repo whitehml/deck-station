@@ -24,7 +24,9 @@ const NAVIGATION := [
 	["Sticks / D-pad", "Move focus.", ANY],
 	["L2 / R2 triggers", "Step the page tabs left / right.", DECK],
 	[["L2 / R2 triggers", "Keyboard Q / E"], "Step the page tabs left / right.", DESKTOP],
-	["Gamepad A / X", "Confirm / cancel.", ANY],
+	["Gamepad A / B", "Confirm or focus / cancel or leave focus.", ANY],
+	["Gamepad B in a dialog", "Cancel, the same as the dialog's Cancel button.", ANY],
+	["Left / right in a help dialog", "Step its pages; A or B closes it.", ANY],
 	["Start + A / Start + B", "Claim robot slot 1 / 2 for that controller.", DESKTOP],
 	["[ / ]", "Claim robot slot 1 / 2 for the keyboard.", DESKTOP],
 ]

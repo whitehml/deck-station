@@ -22,7 +22,7 @@ var slot := 1
 
 var _is_deck := OS.get_environment("SteamDeck") == "1"
 var _claim_names := {1: null, 2: null}  # intent (persisted); null = unclaimed
-var _claims := {1: null, 2: null}  # live device ids (null = unclaimed), from intent + hardware
+var _claims := {1: null, 2: null}  # live device ids (null = unclaimed), sticky once claimed
 var _combo_prev := {}  # device id -> claim combo held last frame
 var _left_order: Array[int] = []
 var _right_order: Array[int] = []
@@ -106,7 +106,16 @@ func set_slot(new_slot: int) -> void:
 
 
 func claim(slot_n: int, device_id: int) -> void:
-	set_claim_name(slot_n, _device_name(device_id))
+	if _is_deck:
+		return
+	slot_n = clampi(slot_n, 1, 2)
+	_claim_names[slot_n] = _device_name(device_id)
+	for other in SLOTS:
+		if other != slot_n and _claims[other] == device_id:
+			_claims[other] = null
+			_claim_names[other] = null
+	_claims[slot_n] = device_id
+	claims_changed.emit()
 
 
 func set_claim_name(slot_n: int, name: String) -> void:
@@ -137,16 +146,28 @@ func _device_name(device_id: int) -> String:
 
 func _reresolve() -> void:
 	var changed := false
+	var used := {}
 	for slot_n in SLOTS:
 		var want = _claim_names[slot_n]
-		var resolved = null
-		if want == "Keyboard/Mouse":
-			resolved = KEYBOARD_DEVICE_ID
-		elif want != null:
-			for id in Input.get_connected_joypads():
-				if Input.get_joy_name(id) == want:
-					resolved = id
-					break
+		var resolved = _claims[slot_n]
+		if want == null:
+			resolved = null
+		elif (
+			resolved != null
+			and resolved != KEYBOARD_DEVICE_ID
+			and resolved not in Input.get_connected_joypads()
+		):
+			resolved = null
+		if resolved == null and want != null:
+			if want == "Keyboard/Mouse":
+				resolved = KEYBOARD_DEVICE_ID
+			else:
+				for id in Input.get_connected_joypads():
+					if id not in used and Input.get_joy_name(id) == want:
+						resolved = id
+						break
+		if resolved != null:
+			used[resolved] = true
 		if _claims[slot_n] != resolved:
 			_claims[slot_n] = resolved
 			changed = true

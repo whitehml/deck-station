@@ -104,7 +104,6 @@ func _apply_source(slot: int, source: int) -> void:
 
 	var header: String = SOURCE_NAMES[source]
 	if CAM_FEEDS.has(source):
-		cam.flip_v = source == Source.WEBCAM
 		cam.texture = _cam_textures.get(CAM_FEEDS[source])
 		if cam.texture == null:
 			header += " — no feed"

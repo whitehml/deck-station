@@ -249,8 +249,24 @@ fn clean() -> Result {
 fn godot(extra: &[&str]) -> Command {
     let mut cmd = Command::new("godot4");
     cmd.arg("--path").arg(repo_root().join("godot")).args(extra);
+    apply_input_hints(&mut cmd);
     cmd
 }
+
+#[cfg(target_os = "macos")]
+fn apply_input_hints(cmd: &mut Command) {
+    for (key, value) in [
+        ("SDL_JOYSTICK_MFI", "0"),
+        ("SDL_HIDAPI_LIBUSB_WHITELIST", "0"),
+    ] {
+        if std::env::var_os(key).is_none() {
+            cmd.env(key, value);
+        }
+    }
+}
+
+#[cfg(not(target_os = "macos"))]
+fn apply_input_hints(_cmd: &mut Command) {}
 
 fn run(mut cmd: Command, label: &str) -> Result {
     let status = cmd.status().map_err(|e| format!("{label}: {e}"))?;

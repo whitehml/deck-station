@@ -107,6 +107,29 @@ make that exception on your own machine, and are willing to.
 
 ---
 
+## Headless: letting an agent drive
+
+For scripting or handing control to a desktop AI agent instead of a human at
+the UI, `external/robocol` ships `ds_agentd`/`ds_agent`: a small daemon that
+holds the robot connection open, and a one-shot JSON CLI that talks to it.
+
+```sh
+cd external/robocol
+cargo run -p ds_agent -- list
+cargo run -p ds_agent -- init "Duo (TeleOp)"
+cargo run -p ds_agent -- run
+cargo run -p ds_agent -- watch --types telemetry
+```
+
+`ds_agent` starts `ds_agentd` automatically the first time it's needed. See
+`external/robocol/ds_agent/src/main.rs`'s doc comment for the full command
+list. This is Unix-only (macOS/Linux/Steam Deck) for now — no Windows named
+pipe support yet.
+
+> [!WARNING]
+> Same disclaimer as the rest of this app: development/practice use only, not
+> competition legal.
+
 # Development
 
 ## Build from source

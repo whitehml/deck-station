@@ -138,6 +138,8 @@ impl RobocolBridge {
     #[signal]
     fn connection_changed(connected: bool);
     #[signal]
+    fn peer_busy(peer: GString);
+    #[signal]
     fn opmode_list_changed(opmodes: VarArray);
     #[signal]
     fn phase_changed(phase: i64, opmode_name: GString);
@@ -212,6 +214,16 @@ impl RobocolBridge {
                 self.signals().client_error().emit(&GString::from(&message));
             }
         }
+    }
+
+    #[func]
+    fn connect_rc(&self) {
+        self.with_client(RobocolClient::connect);
+    }
+
+    #[func]
+    fn disconnect_rc(&self) {
+        self.with_client(RobocolClient::disconnect);
     }
 
     #[func]
@@ -489,6 +501,11 @@ impl RobocolBridge {
                 self.signals().connection_changed().emit(false);
                 self.emit_stream_ended("webcam");
                 self.telemetry_by_tag.clear();
+            }
+            Event::PeerBusy { peer } => {
+                self.signals()
+                    .peer_busy()
+                    .emit(&GString::from(&peer.ip().to_string()));
             }
             Event::OpModeList(list) => {
                 let mut opmodes = VarArray::new();

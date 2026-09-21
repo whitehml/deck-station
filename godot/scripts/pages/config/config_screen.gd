@@ -8,7 +8,7 @@ var _configs: Array = []
 var _stale_key := ""
 var _activated_key := ""
 var _group := ButtonGroup.new()
-var _selected_name := ""
+var _selected_key := ""
 var _pending_metas: Array[Dictionary] = []
 var _ambiguity_prompted := false
 var _ambiguity_candidates: Array[Dictionary] = []
@@ -67,7 +67,7 @@ func _refresh_list() -> void:
 		row.toggle_mode = true
 		row.button_group = _group
 		row.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		row.button_pressed = meta.get("name") == _selected_name
+		row.button_pressed = _config_key(meta) == _selected_key
 		row.pressed.connect(_on_config_selected.bind(meta))
 		%ConfigList.add_child(row)
 		var status := _row_status(meta)
@@ -141,7 +141,7 @@ func _row_status(meta: Dictionary) -> StringName:
 
 
 func _on_config_selected(meta: Dictionary) -> void:
-	_selected_name = meta.get("name", "")
+	_selected_key = _config_key(meta)
 	_pending_metas.append(meta.duplicate())
 	RobotClient.request_particular_configuration(meta)
 
@@ -161,7 +161,7 @@ func grip_tap(grip: StringName) -> void:
 
 func _selected_index() -> int:
 	for i in _configs.size():
-		if _configs[i].get("name") == _selected_name:
+		if _config_key(_configs[i]) == _selected_key:
 			return i
 	return -1
 
@@ -174,7 +174,7 @@ func _on_configuration_received(xml: String) -> void:
 
 
 func _on_new() -> void:
-	_selected_name = ""
+	_selected_key = ""
 	_editor.load_new(
 		{
 			"isDirty": true,
@@ -190,21 +190,21 @@ func _on_new() -> void:
 
 
 func _on_editor_saved(meta: Dictionary, active_out_of_date: bool) -> void:
-	_selected_name = meta.get("name", "")
+	_selected_key = _config_key(meta)
 	if active_out_of_date:
 		_stale_key = _config_key(meta)
 		if _activated_key == _stale_key:
 			_activated_key = ""
 		_save_state()
 	_refresh_list()
-	_poll_until_listed(_selected_name)
+	_poll_until_listed(_selected_key)
 
 
-func _poll_until_listed(name: String) -> void:
+func _poll_until_listed(key: String) -> void:
 	for _i in LIST_POLL_TRIES:
 		RobotClient.request_configurations()
 		await get_tree().create_timer(LIST_POLL_INTERVAL).timeout
-		if _configs.any(func(c: Dictionary) -> bool: return c.get("name") == name):
+		if _listed(key):
 			return
 
 
@@ -220,18 +220,18 @@ func _on_editor_deleted(meta: Dictionary) -> void:
 		_activated_key = ""
 	_ambiguous_keys.erase(key)
 	_save_state()
-	if _selected_name == meta.get("name", ""):
-		_selected_name = ""
+	if _selected_key == key:
+		_selected_key = ""
 	_pending_metas.clear()
 	_refresh_list()
-	_poll_until_unlisted(meta.get("name", ""))
+	_poll_until_unlisted(key)
 
 
-func _poll_until_unlisted(name: String) -> void:
+func _poll_until_unlisted(key: String) -> void:
 	for _i in LIST_POLL_TRIES:
 		RobotClient.request_configurations()
 		await get_tree().create_timer(LIST_POLL_INTERVAL).timeout
-		if not _configs.any(func(c: Dictionary) -> bool: return c.get("name") == name):
+		if not _listed(key):
 			return
 
 
@@ -324,6 +324,10 @@ func _on_ambiguity_dismissed() -> void:
 	for meta: Dictionary in _ambiguity_candidates:
 		_ambiguous_keys.append(_config_key(meta))
 	_refresh_list()
+
+
+func _listed(key: String) -> bool:
+	return not _listed_config(key).is_empty()
 
 
 func _listed_config(key: String) -> Dictionary:

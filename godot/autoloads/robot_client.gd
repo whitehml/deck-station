@@ -1,6 +1,8 @@
 extends Node
 
 signal connection_changed(connected: bool)
+signal link_changed(link: int)
+signal connection_notice(text: String)
 signal opmode_list_changed(opmodes: Array)
 signal phase_changed(phase: int, opmode_name: String)
 signal selected_opmode_changed(opmode_name: String)
@@ -18,8 +20,13 @@ signal video_frame(source: String, texture: Texture2D)
 signal video_stream_ended(source: String)
 
 enum Phase { DISCONNECTED, IDLE, INIT, RUNNING }
+enum Link { DISCONNECTED, CONNECTING, CONNECTED }
 
 const GAMEPAD_HZ := 50.0
+const BUSY_NOTICE := (
+	"The Robot Controller at %s is already connected to another Driver Station. "
+	+ "Disconnect it there, then select DISCONNECTED to try again."
+)
 
 const LOCATION_RESOURCE := "RESOURCE"
 const LOCATION_LOCAL := "LOCAL_STORAGE"
@@ -32,6 +39,7 @@ const LOCATION_NONE := "NONE"
 const DEFAULT_LIMELIGHT_STREAM := "http://192.168.43.1:5800/"
 
 var phase: int = Phase.DISCONNECTED
+var link: int = Link.DISCONNECTED
 var selected_opmode := ""
 var opmodes: Array = []
 var configurations: Array = []
@@ -58,6 +66,7 @@ func _ready() -> void:
 	_bridge = ClassDB.instantiate("RobocolBridge")
 	add_child(_bridge)
 	_bridge.connection_changed.connect(_on_bridge_connection_changed)
+	_bridge.peer_busy.connect(_on_bridge_peer_busy)
 	_bridge.opmode_list_changed.connect(_on_bridge_opmode_list)
 	_bridge.phase_changed.connect(_on_bridge_phase_changed)
 	_bridge.telemetry_received.connect(_on_bridge_telemetry)
@@ -87,6 +96,7 @@ func _ready() -> void:
 		-1 if bind_env.is_empty() else int(bind_env),
 		-1 if peer_port_env.is_empty() else int(peer_port_env)
 	)
+	_set_link(Link.CONNECTING)
 	_setup_video_streams()
 
 
@@ -111,6 +121,23 @@ func _setup_video_streams() -> void:
 	if limelight.is_empty():
 		limelight = DEFAULT_LIMELIGHT_STREAM
 	_bridge.add_video_stream("limelight", limelight)
+
+
+func set_link_enabled(enabled: bool) -> void:
+	if enabled:
+		connection_notice.emit("")
+		_set_link(Link.CONNECTING)
+		_bridge.connect_rc()
+	else:
+		_set_link(Link.DISCONNECTED)
+		_bridge.disconnect_rc()
+
+
+func _set_link(new_link: int) -> void:
+	if new_link == link:
+		return
+	link = new_link
+	link_changed.emit(new_link)
 
 
 func select_opmode(opmode_name: String) -> void:
@@ -249,7 +276,17 @@ func _on_slot_changed(new_slot: int) -> void:
 
 
 func _on_bridge_connection_changed(connected: bool) -> void:
+	if connected:
+		connection_notice.emit("")
+		_set_link(Link.CONNECTED)
+	elif link == Link.CONNECTED:
+		_set_link(Link.CONNECTING)
 	connection_changed.emit(connected)
+
+
+func _on_bridge_peer_busy(peer: String) -> void:
+	_set_link(Link.DISCONNECTED)
+	connection_notice.emit(BUSY_NOTICE % peer)
 
 
 func _on_bridge_opmode_list(list: Array) -> void:

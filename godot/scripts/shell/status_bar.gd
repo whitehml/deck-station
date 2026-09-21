@@ -10,15 +10,32 @@ const PHASE_NAMES := {
 const MATCH_SECONDS := 120.0
 const ENDGAME_SECONDS := 30.0
 const SLOT_STATUS := {1: &"slot1", 2: &"slot2"}
+const LINK_LABELS := {
+	RobotClient.Link.DISCONNECTED: ["DISCONNECTED", &"disconnected"],
+	RobotClient.Link.CONNECTING: ["CONNECTING", &"warn"],
+	RobotClient.Link.CONNECTED: ["CONNECTED", &"connected"],
+}
+const LINK_FONT_COLORS := [
+	&"font_color",
+	&"font_hover_color",
+	&"font_focus_color",
+	&"font_pressed_color",
+	&"font_hover_pressed_color",
+]
 
 var _clock_idle := false
-var _connected := false
+var _disconnect_dialog: ConfirmationDialog
 
 
 func _ready() -> void:
 	%StopButton.pressed.connect(_on_action_pressed)
 	_size_action_button()
-	RobotClient.connection_changed.connect(_on_connection_changed)
+	_build_disconnect_dialog()
+	%ConnectionButton.pressed.connect(_on_connection_pressed)
+	RobotClient.link_changed.connect(_on_link_changed)
+	RobotClient.connection_notice.connect(_on_connection_notice)
+	%ConnectionDismiss.pressed.connect(_on_connection_notice.bind(""))
+	_on_link_changed(RobotClient.link)
 	RobotClient.phase_changed.connect(_on_phase_changed)
 	RobotClient.selected_opmode_changed.connect(_on_selected_opmode_changed)
 	RobotClient.battery_voltage_changed.connect(_on_battery_voltage)
@@ -45,15 +62,41 @@ func _untint(label: Label) -> void:
 
 
 func refresh_tints() -> void:
-	_on_connection_changed(_connected)
+	_on_link_changed(RobotClient.link)
 	_update_slot_badge()
 	_clock_idle = false
 
 
-func _on_connection_changed(connected: bool) -> void:
-	_connected = connected
-	%ConnectionLabel.text = "CONNECTED" if connected else "DISCONNECTED"
-	_tint(%ConnectionLabel, &"connected" if connected else &"disconnected")
+func _build_disconnect_dialog() -> void:
+	_disconnect_dialog = ConfirmationDialog.new()
+	_disconnect_dialog.title = "Disconnect"
+	_disconnect_dialog.dialog_text = "Disconnect from the Robot Controller?"
+	_disconnect_dialog.ok_button_text = "Disconnect"
+	_disconnect_dialog.confirmed.connect(RobotClient.set_link_enabled.bind(false))
+	add_child(_disconnect_dialog)
+	DialogCancel.install(_disconnect_dialog)
+
+
+func _on_connection_pressed() -> void:
+	if RobotClient.link == RobotClient.Link.CONNECTED:
+		_disconnect_dialog.popup_centered()
+	else:
+		RobotClient.set_link_enabled(true)
+
+
+func _on_link_changed(link: int) -> void:
+	var button: Button = %ConnectionButton
+	button.text = LINK_LABELS[link][0]
+	var color := get_theme_color(LINK_LABELS[link][1], ThemeTokens.STATUS_TYPE)
+	for font_color: StringName in LINK_FONT_COLORS:
+		button.add_theme_color_override(font_color, color)
+	if link != RobotClient.Link.CONNECTED:
+		_disconnect_dialog.hide()
+
+
+func _on_connection_notice(text: String) -> void:
+	%ConnectionText.text = text
+	%ConnectionBanner.visible = not text.is_empty()
 
 
 func _on_phase_changed(phase: int, opmode_name: String) -> void:

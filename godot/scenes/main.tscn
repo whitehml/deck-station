@@ -65,9 +65,10 @@ theme_type_variation = &"StatusBarCard"
 layout_mode = 2
 theme_override_constants/separation = 16
 
-[node name="ConnectionLabel" type="Label" parent="Layout/StatusBar/StatusRow/StatusCard/StatusGroup"]
+[node name="ConnectionButton" type="Button" parent="Layout/StatusBar/StatusRow/StatusCard/StatusGroup"]
 unique_name_in_owner = true
 layout_mode = 2
+flat = true
 text = "DISCONNECTED"
 
 [node name="PhaseLabel" type="Label" parent="Layout/StatusBar/StatusRow/StatusCard/StatusGroup"]
@@ -186,6 +187,29 @@ theme_override_colors/font_color = Color(1, 0.85, 0.85, 1)
 autowrap_mode = 3
 
 [node name="ErrorDismiss" type="Button" parent="Layout/ErrorBanner/ErrorRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 0
+text = "Dismiss"
+
+[node name="ConnectionBanner" type="PanelContainer" parent="Layout"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_error")
+
+[node name="ConnectionRow" type="HBoxContainer" parent="Layout/ConnectionBanner"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="ConnectionText" type="Label" parent="Layout/ConnectionBanner/ConnectionRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 0.85, 0.85, 1)
+autowrap_mode = 3
+
+[node name="ConnectionDismiss" type="Button" parent="Layout/ConnectionBanner/ConnectionRow"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 0

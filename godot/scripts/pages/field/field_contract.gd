@@ -7,7 +7,7 @@ const HEADING_KINDS := ["robot", "point"]
 const DEFAULT_ROBOT_SIZE := 18.0
 const ATTRIBUTES := {
 	"robot": ["x", "y", "h", "size", "l", "w", "color"],
-	"point": ["x", "y", "h", "color"],
+	"point": ["x", "y", "h", "color", "label"],
 	"zone": ["pts", "color"],
 	"vec": ["x", "y", "dx", "dy", "mag", "h", "unit", "color"],
 }
@@ -104,6 +104,7 @@ static func _conflicting(attrs: Dictionary, kind: String) -> bool:
 
 static func _fill_point(item: Dictionary, attrs: Dictionary) -> Dictionary:
 	item["origin"] = Vector2(_num(attrs, "x", NAN), _num(attrs, "y", NAN))
+	item["label"] = String(attrs.get("label", ""))
 	return item
 
 

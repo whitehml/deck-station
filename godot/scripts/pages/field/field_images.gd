@@ -4,6 +4,7 @@ const FIELDS := [
 	{"name": "2025-26 DECODE", "path": "res://assets/fields/decode.webp"},
 	{"name": "2024-25 INTO THE DEEP", "path": "res://assets/fields/into_the_deep.webp"},
 	{"name": "Field (no game elements)", "path": "res://assets/fields/base.webp"},
+	{"name": "2026-27 BIOBUZZ", "path": "res://assets/fields/biobuzz.webp"},
 ]
 
 

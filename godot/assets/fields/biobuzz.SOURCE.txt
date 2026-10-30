@@ -1,0 +1,10 @@
+2026-27 BIOBUZZ field background
+
+Source: FIRST Tech Challenge BIOBUZZ Arena manual, TU06, Figure 9-17.
+https://ftc-resources.firstinspires.org/ftc/game/manual-09
+
+The field diagram was rendered and cropped to the inside field square, with
+the audience edge at the bottom. Field coordinates run from (0,0) at the
+audience-left corner to (144,144) at the opposite corner.
+
+FIRST retains rights to the original field artwork and game marks.

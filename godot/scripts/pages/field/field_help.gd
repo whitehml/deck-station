@@ -6,7 +6,7 @@ const TYPES := [
 		"An 18 in square centered on the pose, rotated to its heading.",
 		"x, y, h, size, l, w"
 	],
-	["point", "A small dot, with a short heading arrow when h is given.", "x, y, h"],
+	["point", "A small dot, with optional label and heading arrow.", "x, y, h, label"],
 	["zone", "A translucent polygon through the listed vertices.", "pts"],
 	["vec", "An arrow from the pose, labelled with its magnitude.", "x, y, dx, dy, mag, h, unit"],
 ]
@@ -42,6 +42,10 @@ const ATTRIBUTES := [
 	["mag", "Vector magnitude along h. Takes the place of dx / dy, and needs h to aim it."],
 	["unit", "Suffix for the magnitude label an arrow carries, e.g. in/s."],
 	["color", "Per-item color override, #rrggbb. Otherwise the class color is used."],
+	[
+		"label",
+		'Optional text above a point. Quote text containing spaces, e.g. label="P001 +0.5 in".'
+	],
 ]
 
 const EXAMPLE := [

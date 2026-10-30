@@ -14,6 +14,7 @@ var _items: Array = []
 var _rect := Rect2()
 var _span := Vector2.ONE
 var _texture: Texture2D
+var _point_label_boxes: Array[Rect2] = []
 
 
 func _ready() -> void:
@@ -51,6 +52,7 @@ func _to_screen_all(points: PackedVector2Array) -> PackedVector2Array:
 
 
 func _draw() -> void:
+	_point_label_boxes.clear()
 	_rect = FieldFrame.square(size, CORNER_PAD)
 	_span = FieldFrame.span(FieldLog.frame_min, FieldLog.frame_max)
 	_draw_backdrop()
@@ -134,11 +136,43 @@ func _draw_robot(item: Dictionary, color: Color) -> void:
 func _draw_point(item: Dictionary, color: Color) -> void:
 	var at := _to_screen(item["origin"])
 	draw_circle(at, POINT_RADIUS, color)
+	var label := String(item.get("label", ""))
+	if not label.is_empty():
+		_draw_point_label(label, at, color)
 	var heading: float = item["heading"]
 	if is_nan(heading) or not FieldLog.shows_heading(item["cls"]):
 		return
 	var dir := Vector2.RIGHT.rotated(-deg_to_rad(heading))
 	_draw_arrow(at, at + dir * POINT_HEADING_PX, color)
+
+
+func _draw_point_label(text: String, at: Vector2, color: Color) -> void:
+	var font := ThemeDB.fallback_font
+	var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, FieldFrame.LABEL_SIZE).x
+	var extent := Vector2(width + 8.0, font.get_height(FieldFrame.LABEL_SIZE) + 4.0)
+	var box := Rect2(at - Vector2(extent.x * 0.5, extent.y + 10.0), extent)
+	for attempt in range(64):
+		var row := ceili(float(attempt) / 2.0) * (1.0 if attempt % 2 else -1.0)
+		var origin := at - Vector2(extent.x * 0.5, extent.y + 10.0)
+		origin.y += row * (extent.y + 3.0)
+		origin.x = clampf(
+			origin.x, _rect.position.x, maxf(_rect.position.x, _rect.end.x - extent.x)
+		)
+		origin.y = clampf(
+			origin.y, _rect.position.y, maxf(_rect.position.y, _rect.end.y - extent.y)
+		)
+		box = Rect2(origin, extent)
+		if not _point_label_boxes.any(
+			func(other: Rect2) -> bool: return box.grow(2.0).intersects(other)
+		):
+			break
+	_point_label_boxes.append(box)
+	var edge := Vector2(
+		clampf(at.x, box.position.x, box.end.x), clampf(at.y, box.position.y, box.end.y)
+	)
+	draw_line(at, edge, Color(color, 0.65), 1.0, true)
+	draw_rect(box, Color(0.02, 0.03, 0.04, 0.85))
+	_draw_label(text, Vector2(box.get_center().x, box.end.y - 4.0), color)
 
 
 func _draw_zone(item: Dictionary, color: Color) -> void:

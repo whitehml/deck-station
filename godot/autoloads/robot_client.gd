@@ -248,7 +248,7 @@ func config_is_active(meta: Dictionary) -> bool:
 
 
 func _process(delta: float) -> void:
-	if _bridge == null or phase == Phase.DISCONNECTED:
+	if _bridge == null or phase == Phase.DISCONNECTED or phase == Phase.IDLE:
 		return
 	_gamepad_accum += delta
 	if _gamepad_accum < 1.0 / GAMEPAD_HZ:
